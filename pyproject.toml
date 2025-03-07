@@ -1,7 +1,7 @@
 [project]
-name = "simvue-template"
+name = "simvue-moose"
 version = "1.0.0a1"
-description = "Template repository for creating Connector classes."
+description = "Connector to allow you to easily add Simvue tracking and monitoring to MOOSE (Multiphysics Object Oriented Simulation Environment) simulations."
 authors = [
     {name = "Matt Field",email = "matthew.field@ukaea.uk"}
 ]
@@ -38,7 +38,7 @@ keywords = [
 
 [project.urls]
 homepage = "https://simvue.io"
-repository = "https://github.com/simvue-io/connectors-template"
+repository = "https://github.com/simvue-io/connectors-moose"
 documentation = "https://docs.simvue.io"
 
 [tool.poetry.group.dev.dependencies]

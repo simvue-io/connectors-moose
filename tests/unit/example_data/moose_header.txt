@@ -1,0 +1,39 @@
+Framework Information:
+MOOSE Version:           git commit 87de105995 on 2024-08-08
+LibMesh Version:
+PETSc Version:           3.20.3
+SLEPc Version:           3.20.1
+Current Time:            Mon Oct  7 16:14:13 2024
+Executable Timestamp:    Mon Aug 12 13:47:26 2024
+
+Checkpoint:
+  Wall Time Interval:      Every 3600.000000 s
+  User Checkpoint:         Disabled
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh:
+  Parallel Type:           replicated
+  Mesh Dimension:          3
+  Spatial Dimension:       3
+  Nodes:                   9261
+  Elems:                   8000
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                9261
+  Num Local DOFs:          9261
+  Variables:               "T"
+  Finite Element Types:    "LAGRANGE"
+  Approximation Orders:    "FIRST"
+
+Execution Information:
+  Executioner:             Transient
+  TimeStepper:             ConstantDT
+  TimeIntegrator:          ImplicitEuler
+  Solver Mode:             NEWTON
+  MOOSE Preconditioner:    SMP (auto)
