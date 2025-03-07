@@ -1,0 +1,49 @@
+[project]
+name = "simvue-template"
+version = "1.0.0a1"
+description = "Template repository for creating Connector classes."
+authors = [
+    {name = "Matt Field",email = "matthew.field@ukaea.uk"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "simvue-connector (==1.0.0a2)",
+    "f90nml (>1.4.3)"
+    ]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+    "Typing :: Typed"
+]
+keywords = [
+    "tracking",
+    "monitoring",
+    "metrics",
+    "alerting",
+    "metrics-gathering"
+]
+
+[project.urls]
+homepage = "https://simvue.io"
+repository = "https://github.com/simvue-io/connectors-template"
+documentation = "https://docs.simvue.io"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
