@@ -8,8 +8,8 @@ a rectangular bar, where one end is held at 0K, and the other end at 1000K.
 
 To run this example with Docker:
     - Pull the base MOOSE image: docker run -it idaholab/moose:latest
-    - Clone this repository: git clone https://github.com/simvue-io/integrations.git
-    - Move into MOOSE examples directory: cd integrations/examples/moose
+    - Clone this repository: git clone https://github.com/simvue-io/connectors-moose.git
+    - Move into MOOSE examples directory: cd connectors-moose/examples
     - Create a simvue.toml file, copying in your information from the Simvue server: vi simvue.toml
     - Install Poetry: pip install poetry
     - Install required modules: poetry install
@@ -17,7 +17,7 @@ To run this example with Docker:
 
 To run this example on your own system with MOOSE installed:
     - Ensure that you have a MOOSE app installed with the Heat Transfer module enabled
-    - Move into MOOSE examples directory: cd integrations/examples/moose
+    - Move into MOOSE examples directory: cd connectors-moose/examples
     - Create a simvue.toml file, copying in your information from the Simvue server: vi simvue.toml
     - Update the 'MOOSE_APP_PATH' at the top of the script to point to your MOOSE app
     - Install Poetry: pip install poetry

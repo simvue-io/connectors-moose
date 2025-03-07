@@ -446,22 +446,6 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "f90nml"
-version = "1.4.4"
-description = "Fortran 90 namelist parser"
-optional = false
-python-versions = "*"
-groups = ["main"]
-markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
-files = [
-    {file = "f90nml-1.4.4-py2.py3-none-any.whl", hash = "sha256:58d91eb0f9a424a48fe5df868cbb33c86800f1026d6e7f3c0f663c930dddc644"},
-    {file = "f90nml-1.4.4.tar.gz", hash = "sha256:65e8e135779895245238cbf6be5b1b80d6c2b8c9350c9cdce6183a31bdfd7622"},
-]
-
-[package.extras]
-yaml = ["PyYAML"]
-
-[[package]]
 name = "fief-client"
 version = "0.20.0"
 description = "Fief Client for Python"
@@ -1972,4 +1956,4 @@ termcolor = ">=2.3,<3.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "3832dcec6da01c3805b441e076af40247dd38f192439f82f3bf7f9fd753970c1"
+content-hash = "129b55a4ae66d42d846f72bf03b918a1b416b698aae2d25a0827e2af3c63c22b"
