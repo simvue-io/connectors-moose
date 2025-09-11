@@ -21,8 +21,6 @@ Allow easy connection between Simvue and MOOSE (Multiphysics Object Oriented Sim
 
 <h3 align="center">
  <a href="https://simvue.io"><b>Website</b></a>
-  •
-  <a href="https://docs.simvue.io"><b>Documentation</b></a>
 </h3>
 
 ## Implementation
