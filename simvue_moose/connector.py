@@ -30,25 +30,69 @@ class MooseRun(WrappedRun):
         run.launch(...)
     """
 
-    moose_application_path: pydantic.FilePath = None
-    moose_file_path: pydantic.FilePath = None
-    track_vector_postprocessors: bool = None
-    track_vector_positions: bool = None
-    moose_env_vars: typing.Dict[str, typing.Any] = None
-    run_in_parallel: bool = None
-    num_processors: int = None
-    mpiexec_env_vars: typing.Dict[str, typing.Any] = None
+    def __init__(
+        self,
+        mode: typing.Literal["online", "offline", "disabled"] = "online",
+        abort_callback: typing.Callable[[Self], None] | None = None,
+        server_token: str | None = None,
+        server_url: str | None = None,
+        debug: bool = False,
+        server_profile: str | None = None,
+    ):
+        """Initialize the MooseRun instance.
 
-    _output_dir_path: typing.Union[str, pydantic.DirectoryPath] = None
-    _results_prefix: str = None
-    _time = time.time()
-    # This represents the step number and time of the step, ie when MOOSE says 'Time Step X, time = Y'
-    _step_num = 0
-    _step_time = 0
-    # Initialize counters for keeping track of the number of linear and nonlinear steps involved in each solve
-    _nonlinear = 0
-    _linear = 0
-    _dt = None
+        If `abort_callback` is provided the first argument must be this Run instance.
+
+        Parameters
+        ----------
+        mode : typing.Literal['online', 'offline', 'disabled'], optional
+            mode of running, by default 'online':
+                online - objects sent directly to Simvue server
+                offline - everything is written to disk for later dispatch
+                disabled - disable monitoring completelyby default "online"
+        abort_callback : typing.Callable[[Self], None] | None, optional
+            callback executed when the run is aborted, by default None
+        server_token : str | None, optional
+            overwrite value for server token, by default None
+        server_url : str | None, optional
+            overwrite value for server URL, by default None
+        debug : bool, optional
+            run in debug mode, by default False
+        server_profile : str | None, optional
+            specify alternative profile to use for server, this assumes
+            additional profiles have been specified in the configuration.
+            Default is to use the main server.
+
+        """
+
+        self.moose_application_path: pydantic.FilePath = None
+        self.moose_file_path: pydantic.FilePath = None
+        self.track_vector_postprocessors: bool = None
+        self.track_vector_positions: bool = None
+        self.moose_env_vars: typing.Dict[str, typing.Any] = None
+        self.run_in_parallel: bool = None
+        self.num_processors: int = None
+        self.mpiexec_env_vars: typing.Dict[str, typing.Any] = None
+
+        self._output_dir_path: typing.Union[str, pydantic.DirectoryPath] = None
+        self._results_prefix: str = None
+        self._time = time.time()
+        # This represents the step number and time of the step, ie when MOOSE says 'Time Step X, time = Y'
+        self._step_num = 0
+        self._step_time = 0
+        # Initialize counters for keeping track of the number of linear and nonlinear steps involved in each solve
+        self._nonlinear = 0
+        self._linear = 0
+        self._dt = None
+
+        super().__init__(
+            mode=mode,
+            abort_callback=abort_callback,
+            server_token=server_token,
+            server_url=server_url,
+            debug=debug,
+            server_profile=server_profile,
+        )
 
     def _moose_input_parser(self, input_file: pathlib.Path):
         """Parse MOOSE input file, and create a dictionary of metadata with dot notation representing indentation of keys.
@@ -459,7 +503,7 @@ class MooseRun(WrappedRun):
             )
 
     def _post_simulation(self):
-        """Upload informatino to Simvue after the MOOSE simulation finishes."""
+        """Upload information to Simvue after the MOOSE simulation finishes."""
         for file in pathlib.Path(self._output_dir_path).glob(
             f"{self._results_prefix}*"
         ):
