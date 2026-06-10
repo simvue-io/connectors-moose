@@ -681,4 +681,6 @@ class MooseRun(WrappedRun):
                 _, data = self._vector_postprocessor_parser(path)
                 self._per_metric_callback(data, {})
 
+        self._post_simulation()
+
         super().load()
