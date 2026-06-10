@@ -573,3 +573,49 @@ class MooseRun(WrappedRun):
         self.mpiexec_env_vars = mpiexec_env_vars or {}
 
         super().launch()
+
+    @simvue.utilities.prettify_pydantic
+    @pydantic.validate_call
+    def load(
+        self,
+        moose_file_path: pydantic.FilePath,
+        results_dir_path: pydantic.DirectoryPath,
+        upload_files: list[str] | None = None,
+        track_vector_postprocessors: bool = False,
+        track_vector_positions: bool = False,
+    ):
+        """Command to load a set of results from a MOOSE simulation into Simvue.
+
+        Parameters
+        ----------
+        moose_file_path : pydantic.FilePath
+            Path to the MOOSE configuration file
+        results_dir_path: pydantic.DirectoryPath
+            Path to the directory containing MOOSE results
+        upload_files : list[str] | None, optional
+            List of results file names to upload to the Simvue server for storage, by default None
+            These should be supplied relative to the output directory provided in the MOOSE file.
+            If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        track_vector_postprocessors : bool, optional
+            Whether to track CSV outputs from Vector PostProcessors, by default False
+        track_vector_positions: bool, optional
+            Whether to create metrics for the positions given in Vector PostProcessor output at each time step (x, y, z, radius), by default False
+
+        Raises
+        ------
+        ValueError
+            Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
+
+        """
+        if track_vector_positions and not track_vector_postprocessors:
+            raise ValueError(
+                "Vector positions can only be tracked if vector postprocessor tracking is enabled."
+            )
+
+        self.moose_file_path = moose_file_path
+        self._output_dir_path = results_dir_path
+        self.upload_files = upload_files
+        self.track_vector_postprocessors = track_vector_postprocessors
+        self.track_vector_positions = track_vector_positions
+
+        super().load()
