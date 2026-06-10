@@ -36,6 +36,17 @@ class MooseRun(WrappedRun):
         run.launch(...)
     """
 
+    _patterns: dict[str, typing.Pattern] = {
+        "time_step": re.compile(r"Time Step.*"),
+        "converged": re.compile(r"\s*Solve Converged!\s*"),
+        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
+        "terminated": re.compile(
+            r"Terminator '.+' is causing the execution to terminate."
+        ),
+        "nonlinear": re.compile(r" \d+ Nonlinear \|R\|"),
+        "linear": re.compile(r"     \d+ Linear \|R\|"),
+    }
+
     def __init__(
         self,
         mode: typing.Literal["online", "offline", "disabled"] = "online",
@@ -90,6 +101,7 @@ class MooseRun(WrappedRun):
         self._nonlinear = 0
         self._linear = 0
         self._dt = None
+        self._loading_historic_run = False
 
         super().__init__(
             mode=mode,
@@ -178,7 +190,9 @@ class MooseRun(WrappedRun):
                 )
 
     @mp_file_parser.file_parser
-    def _moose_header_parser(self, input_file: str, **__) -> typing.Dict[str, str]:
+    def _moose_header_parser(
+        self, input_file: str, **__
+    ) -> tuple[dict[str, str], dict[str, str | float | int]]:
         """Parse the header of the MOOSE log file and return the data from it as a dictionary.
 
         Parameters
@@ -190,8 +204,8 @@ class MooseRun(WrappedRun):
 
         Returns
         -------
-        typing.Dict[str, str]
-            The parsed data from the header of the MOOSE log file
+        tuple[dict[str, str], dict[str, str | float | int]]
+            An (empty) metadata dict,  and parsed data from the header of the MOOSE log file
 
         """
         # Open the log file, and read header lines (which contains information about the MOOSE version used etc)
@@ -205,6 +219,9 @@ class MooseRun(WrappedRun):
             # Ignore blank lines and lines which don't contain a colon
             if not line.strip() or ":" not in line:
                 continue
+            # Break if execution has begun (outside of header)
+            if "Currently Executing" in line:
+                break
             key, value = line.split(":", 1)
             key = key.strip()
             key = key.replace(" ", "_").lower()
@@ -225,7 +242,7 @@ class MooseRun(WrappedRun):
         self,
         input_file: str,
         **__,
-    ) -> typing.Dict[str, str]:
+    ) -> tuple[dict[str, str], dict[str, float | int]]:
         """Parse data from VectorPostProcessor CSV files.
 
         Parameters
@@ -237,7 +254,7 @@ class MooseRun(WrappedRun):
 
         Returns
         -------
-        typing.Dict[str, str]
+        tuple[dict[str, str], dict[str, float | int]]
             A dictionary of metadata and data contained in the CSV file
 
         """
@@ -317,9 +334,10 @@ class MooseRun(WrappedRun):
                 self._step_time = float(step_time.group(2))
 
         elif "converged" in log_data.keys():
-            self.log_event(
-                f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
-            )
+            if not self._loading_historic_run:
+                self.log_event(
+                    f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
+                )
             self.log_event(f" Total Nonlinear Iterations: {self._nonlinear}.")
             self.log_event(f" Total Linear Iterations: {self._linear}.")
 
@@ -371,6 +389,7 @@ class MooseRun(WrappedRun):
         """
         metric_time = csv_data.pop("time", None)
         metric_step = csv_data.pop("step", None)
+        timestamp = sim_metadata.get("timestamp", "").replace(" ", "T")
 
         if self._dt and not metric_step:
             # Has come from a scalar PostProcessor, can assume step = time / dt
@@ -381,7 +400,7 @@ class MooseRun(WrappedRun):
             csv_data,
             step=metric_step if metric_step is not None else self._step_num,
             time=metric_time if metric_time is not None else self._step_time,
-            timestamp=sim_metadata["timestamp"].replace(" ", "T"),
+            timestamp=timestamp if timestamp else None,
         )
 
     def _pre_simulation(self):
@@ -457,22 +476,8 @@ class MooseRun(WrappedRun):
                 self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
             ),
             callback=self._per_event_callback,
-            tracked_values=[
-                re.compile(r"Time Step.*"),
-                " Solve Converged!",
-                " Solve Did NOT Converge!",
-                re.compile(r"Terminator '.+' is causing the execution to terminate."),
-                re.compile(r" \d+ Nonlinear \|R\|"),
-                re.compile(r"     \d+ Linear \|R\|"),
-            ],
-            labels=[
-                "time_step",
-                "converged",
-                "non_converged",
-                "terminated",
-                "nonlinear",
-                "linear",
-            ],
+            tracked_values=list(self._patterns.values()),
+            labels=list(self._patterns.keys()),
         )
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
@@ -613,9 +618,67 @@ class MooseRun(WrappedRun):
             )
 
         self.moose_file_path = moose_file_path
-        self._output_dir_path = results_dir_path
+        self._output_dir_path = pathlib.Path(results_dir_path)
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
+        self._loading_historic_run = True
+
+        # Save the MOOSE file for this run to the Simvue server
+        if pathlib.Path(self.moose_file_path).exists:
+            self.save_file(self.moose_file_path, "input")
+
+        # Parse the MOOSE input file
+        self._moose_input_parser(pathlib.Path(self.moose_file_path))
+
+        # Save the MOOSE Makefile
+        if (
+            pathlib.Path(self.moose_application_path)
+            .parent.joinpath("Makefile")
+            .exists()
+        ):
+            self.save_file(
+                pathlib.Path(self.moose_application_path).parent.joinpath("Makefile"),
+                "input",
+            )
+
+        log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+        if log_path.exists():
+            # Pass into header callback to extract metadata
+            _, metadata = self._moose_header_parser(log_path)
+            self.update_metadata(metadata)
+
+            # Parse line by line, matching regex patterns, upload as Events if found
+            with open(log_path) as file:
+                file_lines = file.readlines()
+                file_lines = list(filter(None, file_lines))
+
+                for line in file_lines:
+                    for label, pattern in self._patterns.items():
+                        match = pattern.search(line)
+                        if not match:
+                            continue
+                        self._per_event_callback({label: match.group(0)})
+                        break
+
+        # Extract metrics CSV file
+        csv_path = pathlib.Path(f"{self._results_prefix}.csv")
+        if csv_path.exists():
+            with open(csv_path, "r") as _file:
+                for _step, _metric in enumerate(csv.DictReader(_file)):
+                    _metric["step"] = _step
+                    self._metrics_callback(
+                        data=_metric,
+                    )
+
+        if self.track_vector_postprocessors:
+            csv_paths = self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
+            for path in csv_paths:
+                if path == self._output_dir_path.joinpath(
+                    f"{self._results_prefix}_*_time.csv"
+                ):
+                    continue
+                _, data = self._vector_postprocessor_parser(path)
+                self._per_metric_callback(data, {})
 
         super().load()
