@@ -631,21 +631,10 @@ class MooseRun(WrappedRun):
         # Parse the MOOSE input file
         self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
-        # Save the MOOSE Makefile
-        if (
-            pathlib.Path(self.moose_application_path)
-            .parent.joinpath("Makefile")
-            .exists()
-        ):
-            self.save_file(
-                pathlib.Path(self.moose_application_path).parent.joinpath("Makefile"),
-                "input",
-            )
-
         log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
         if log_path.exists():
             # Pass into header callback to extract metadata
-            _, metadata = self._moose_header_parser(log_path)
+            _, metadata = self._moose_header_parser(input_file=str(log_path))
             self.update_metadata(metadata)
 
             # Parse line by line, matching regex patterns, upload as Events if found
@@ -658,18 +647,17 @@ class MooseRun(WrappedRun):
                         match = pattern.search(line)
                         if not match:
                             continue
-                        self._per_event_callback({label: match.group(0)})
+                        self._per_event_callback({label: match.group(0)}, {})
                         break
 
         # Extract metrics CSV file
-        csv_path = pathlib.Path(f"{self._results_prefix}.csv")
+        csv_path = self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
         if csv_path.exists():
             with open(csv_path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
-                    _metric["step"] = _step
-                    self._metrics_callback(
-                        data=_metric,
-                    )
+                    _data = {key: float(value) for key, value in _metric.items()}
+                    _data["step"] = _step
+                    self._per_metric_callback(_data, {})
 
         if self.track_vector_postprocessors:
             csv_paths = self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
@@ -678,7 +666,7 @@ class MooseRun(WrappedRun):
                     f"{self._results_prefix}_*_time.csv"
                 ):
                     continue
-                _, data = self._vector_postprocessor_parser(path)
+                _, data = self._vector_postprocessor_parser(input_file=str(path))
                 self._per_metric_callback(data, {})
 
         self._post_simulation()
