@@ -62,30 +62,22 @@ def mock_aborted_moose_process(self, *_, **__):
         """
         Long running process which should be interrupted at the next heartbeat
         """
-        self._heartbeat_interval = 2
         time_elapsed = 0
         while time_elapsed < 30:
+            time.sleep(1)
             if self._alert_raised_trigger.is_set():
                 break
-            time.sleep(1)
             time_elapsed += 1
+        if time_elapsed >= 30:
+            raise AssertionError("Not successfully aborted")
         self._trigger.set()
 
     thread = threading.Thread(target=aborted_process)
     thread.start()
 
 
-def abort(self):
-    """
-    Instead of making an API call to the server, just sleep for 1s and return True to indicate an abort has been triggered
-    """
-    time.sleep(2)
-    return True
-
-
 @patch.object(MooseRun, "_moose_input_parser", mock_input_parser)
 @patch.object(MooseRun, "add_process", mock_aborted_moose_process)
-@patch.object(Run, "abort_trigger", abort)
 def test_moose_file_upload_after_abort(folder_setup):
     """
     Check that outputs are uploaded if the simulation is aborted early by Simvue
@@ -95,6 +87,7 @@ def test_moose_file_upload_after_abort(folder_setup):
     with MooseRun() as run:
         run.config(disable_resources_metrics=True)
         run.init(name=name, folder=folder_setup)
+        run._alert_raised_trigger.set()
         run_id = run.id
         run.launch(
             moose_application_path=pathlib.Path(__file__),
