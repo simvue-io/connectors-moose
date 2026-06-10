@@ -9,7 +9,7 @@ from simvue.sender import Sender
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
 @pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-def test_moose_connector(offline, parallel):
+def test_moose_connector(offline, parallel, offline_cache_setup):
     try:
         subprocess.run("/opt/moose/bin/moose-opt")
     except FileNotFoundError:
