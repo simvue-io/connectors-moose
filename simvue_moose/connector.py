@@ -318,7 +318,7 @@ class MooseRun(WrappedRun):
             for key in log_data.keys()
         ):
             try:
-                self.log_event(list(log_data.values())[0])
+                self.log_event(list(log_data.values())[0].rstrip())
             except RuntimeError as e:
                 self._error(e)
                 return False
@@ -417,7 +417,7 @@ class MooseRun(WrappedRun):
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists:
-            self.save_file(self.moose_file_path, "input")
+            self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
         self._moose_input_parser(pathlib.Path(self.moose_file_path))
@@ -430,7 +430,7 @@ class MooseRun(WrappedRun):
         ):
             self.save_file(
                 pathlib.Path(self.moose_application_path).parent.joinpath("Makefile"),
-                "input",
+                category="input",
             )
 
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
@@ -513,7 +513,7 @@ class MooseRun(WrappedRun):
         for file in files_to_upload:
             if file.absolute() == pathlib.Path(self.moose_file_path).absolute():
                 continue
-            self.save_file(file, "output")
+            self.save_file(file, category="output")
 
         super()._post_simulation()
 
@@ -626,7 +626,7 @@ class MooseRun(WrappedRun):
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists:
-            self.save_file(self.moose_file_path, "input")
+            self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
         self._moose_input_parser(pathlib.Path(self.moose_file_path))
