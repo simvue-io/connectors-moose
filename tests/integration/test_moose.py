@@ -26,13 +26,16 @@ def run_moose(
         if load:
             patched_file_data = input_file_data.replace(
                 "$OUTPUT_PATH",
-                str(pathlib.Path(__file__).parent.joinpath("example_data", "results"))
-                + "simvue_thermal",
+                str(
+                    pathlib.Path(__file__).parent.joinpath(
+                        "example_data", "results", "simvue_thermal"
+                    )
+                ),
             )
         else:
             patched_file_data = input_file_data.replace(
                 "$OUTPUT_PATH",
-                str(pathlib.Path(tempd).joinpath("results")) + "simvue_thermal",
+                str(pathlib.Path(tempd).joinpath("results", "simvue_thermal")),
             )
         temp_input_file.write_text(patched_file_data)
 
