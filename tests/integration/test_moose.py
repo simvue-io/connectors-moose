@@ -38,7 +38,7 @@ def run_moose(
 
         if load:
             run.load(
-                moose_file_path=pathlib.Path(__file__).parent.joinpath("thermal_bar.i"),
+                moose_file_path=moose_file_path,
                 results_dir_path=moose_load_path,
                 # You can optionally choose to track VectorPostProcessor outputs too:
                 track_vector_postprocessors=True,
@@ -82,13 +82,13 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         moose_file_path=pathlib.Path(__file__).parent.joinpath(
             "example_data", "thermal_bar.i"
         ),
+        offline=offline,
+        parallel=parallel,
+        load=load,
         moose_app_path=MOOSE_APP_PATH,
         moose_load_path=pathlib.Path(__file__).parent.joinpath(
             "example_data", "results"
         ),
-        load=load,
-        offline=offline,
-        parallel=parallel,
     )
 
     if offline:
