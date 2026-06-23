@@ -194,8 +194,8 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Check input file uploaded as input
         client.get_artifacts_as_files(run_id, "input", temp_dir)
-        assert pathlib.Path(temp_dir.name).joinpath("thermal_bar.i").exists()
+        assert pathlib.Path(temp_dir).joinpath("thermal_bar.i").exists()
 
         # Check results uploaded as output
         client.get_artifacts_as_files(run_id, "output", temp_dir)
-        assert pathlib.Path(temp_dir.name).joinpath("simvue_thermal.e").exists()
+        assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
