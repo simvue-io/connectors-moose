@@ -12,56 +12,78 @@ MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
 
 
 def run_moose(
-    moose_file_path, offline, parallel, load, moose_app_path=None, moose_load_path=None
+    moose_file_path: pathlib.Path,
+    offline,
+    parallel,
+    load,
+    moose_app_path=None,
+    moose_load_path=None,
 ) -> None:
 
-    # Initialise the MooseRun class as a context manager
-    with MooseRun(mode="offline" if offline else "online") as run:
-        # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
-        run.init(
-            name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
-            description="An example of using the MooseRun Connector to track a MOOSE simulation.",
-            folder="/test-moose",
-            tags=["moose", "thermal", "diffusion"],
-            retention_period="1 hour",
+    # Create a temp dir to contain results, and replace path in file
+    with tempfile.TemporaryDirectory() as tempd:
+        temp_input_file = pathlib.Path(tempd).joinpath(moose_file_path.name)
+        input_file_data = moose_file_path.read_text()
+        input_file_data.replace(
+            "$OUTPUT_PATH",
+            str(pathlib.Path(tempd).joinpath("results")) + "simvue_thermal",
         )
+        temp_input_file.write_text(input_file_data)
 
-        # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
-        run.create_metric_threshold_alert(
-            name="avg_temp_above_500",
-            metric="average_temerature",
-            rule="is above",
-            threshold=500.0,
-            frequency=1,
-            window=1,
-        )
-
-        if load:
-            run.load(
-                moose_file_path=moose_file_path,
-                results_dir_path=moose_load_path,
-                # You can optionally choose to track VectorPostProcessor outputs too:
-                track_vector_postprocessors=True,
-                track_vector_positions=False,
-            )
-        else:
-            # Then call the .launch() method to start your MOOSE simulation
-            run.launch(
-                moose_application_path=moose_app_path,
-                moose_file_path=moose_file_path,
-                # You can optionally choose to track VectorPostProcessor outputs too:
-                track_vector_postprocessors=True,
-                track_vector_positions=False,
-                # And you can choose whether to run it in parallel
-                run_in_parallel=parallel,
-                num_processors=2,
-                mpiexec_env_vars={"allow-run-as-root": True},
+        # Initialise the MooseRun class as a context manager
+        with MooseRun(mode="offline" if offline else "online") as run:
+            # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
+            run.init(
+                name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
+                description="An example of using the MooseRun Connector to track a MOOSE simulation.",
+                folder="/test-moose",
+                tags=["moose", "thermal", "diffusion"],
+                retention_period="1 hour",
             )
 
-        # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
-        run.log_event("Deleting local copies of results...")
+            # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
+            run.create_metric_threshold_alert(
+                name="avg_temp_above_500",
+                metric="average_temerature",
+                rule="is above",
+                threshold=500.0,
+                frequency=1,
+                window=1,
+            )
 
-        return run.id
+            if load:
+                run.load(
+                    moose_file_path=temp_input_file,
+                    results_dir_path=tempd.joinpath("results"),
+                    # You can optionally choose to track VectorPostProcessor outputs too:
+                    track_vector_postprocessors=True,
+                    track_vector_positions=False,
+                )
+            else:
+                # Then call the .launch() method to start your MOOSE simulation
+                run.launch(
+                    moose_application_path=moose_app_path,
+                    moose_file_path=temp_input_file,
+                    # You can optionally choose to track VectorPostProcessor outputs too:
+                    track_vector_postprocessors=True,
+                    track_vector_positions=False,
+                    # And you can choose whether to run it in parallel
+                    run_in_parallel=parallel,
+                    num_processors=2,
+                    mpiexec_env_vars={"allow-run-as-root": True},
+                )
+
+            # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
+            run.log_event("Deleting local copies of results...")
+
+            run_id = run.id
+
+        if offline:
+            sender = Sender(throw_exceptions=True)
+            sender.upload()
+            run_id = sender._id_mapping.get(run_id)
+
+        return run_id
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
@@ -90,11 +112,6 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
             "example_data", "results"
         ),
     )
-
-    if offline:
-        sender = Sender(throw_exceptions=True)
-        sender.upload()
-        run_id = sender._id_mapping.get(run_id)
 
     client = simvue.Client()
     run_data = client.get_run(run_id)
