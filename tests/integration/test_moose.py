@@ -1,24 +1,94 @@
-from examples.moose_example import moose_example
 import pytest
 import subprocess
 import pathlib
 import tempfile
 import simvue
+import uuid
+from simvue_moose.connector import MooseRun
 from simvue.sender import Sender
+
+# Set this variable to wherever your MOOSE app is located:
+MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
+
+
+def run_moose(
+    moose_file_path, offline, parallel, load, moose_app_path=None, moose_load_path=None
+) -> None:
+
+    # Initialise the MooseRun class as a context manager
+    with MooseRun(mode="offline" if offline else "online") as run:
+        # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
+        run.init(
+            name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
+            description="An example of using the MooseRun Connector to track a MOOSE simulation.",
+            folder="/test-moose",
+            tags=["moose", "thermal", "diffusion"],
+            retention_period="1 hour",
+        )
+
+        # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
+        run.create_metric_threshold_alert(
+            name="avg_temp_above_500",
+            metric="average_temerature",
+            rule="is above",
+            threshold=500.0,
+            frequency=1,
+            window=1,
+        )
+
+        if load:
+            run.load(
+                moose_file_path=pathlib.Path(__file__).parent.joinpath("thermal_bar.i"),
+                results_dir_path=moose_load_path,
+                # You can optionally choose to track VectorPostProcessor outputs too:
+                track_vector_postprocessors=True,
+                track_vector_positions=False,
+            )
+        else:
+            # Then call the .launch() method to start your MOOSE simulation
+            run.launch(
+                moose_application_path=moose_app_path,
+                moose_file_path=moose_file_path,
+                # You can optionally choose to track VectorPostProcessor outputs too:
+                track_vector_postprocessors=True,
+                track_vector_positions=False,
+                # And you can choose whether to run it in parallel
+                run_in_parallel=parallel,
+                num_processors=2,
+                mpiexec_env_vars={"allow-run-as-root": True},
+            )
+
+        # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
+        run.log_event("Deleting local copies of results...")
+
+        return run.id
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
 @pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-def test_moose_connector(offline, parallel, offline_cache_setup):
+@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
+def test_moose_connector(offline, parallel, load, offline_cache_setup):
     try:
-        subprocess.run("/opt/moose/bin/moose-opt")
+        subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
         pytest.skip(
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
+    if load:
+        if parallel:
+            pytest.skip("Parallel has no effect when loading from historic runs")
 
-    run_id = moose_example(
-        "/opt/moose/bin/moose-opt", offline=offline, parallel=parallel
+    run_id = run_moose(
+        moose_file_path=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "thermal_bar.i"
+        ),
+        moose_app_path=MOOSE_APP_PATH,
+        moose_load_path=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "results"
+        ),
+        load=load,
+        offline=offline,
+        parallel=parallel,
     )
 
     if offline:

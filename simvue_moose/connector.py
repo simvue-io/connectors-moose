@@ -416,7 +416,9 @@ class MooseRun(WrappedRun):
         )
 
         # Save the MOOSE file for this run to the Simvue server
-        if pathlib.Path(self.moose_file_path).exists:
+        if pathlib.Path(self.moose_file_path).exists() and (
+            self.upload_files is None or self.moose_file_path in self.upload_files
+        ):
             self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
@@ -625,7 +627,9 @@ class MooseRun(WrappedRun):
         self._loading_historic_run = True
 
         # Save the MOOSE file for this run to the Simvue server
-        if pathlib.Path(self.moose_file_path).exists:
+        if pathlib.Path(self.moose_file_path).exists() and (
+            self.upload_files is None or self.moose_file_path in self.upload_files
+        ):
             self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
