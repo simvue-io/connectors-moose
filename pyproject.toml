@@ -41,7 +41,7 @@ repository = "https://github.com/simvue-io/connectors-moose"
 documentation = "https://docs.simvue.io"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
+pytest = "^9.0.3"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
