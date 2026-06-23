@@ -24,10 +24,17 @@ def run_moose(
     with tempfile.TemporaryDirectory() as tempd:
         temp_input_file = pathlib.Path(tempd).joinpath(moose_file_path.name)
         input_file_data = moose_file_path.read_text()
-        patched_file_data = input_file_data.replace(
-            "$OUTPUT_PATH",
-            str(pathlib.Path(tempd).joinpath("results")) + "simvue_thermal",
-        )
+        if load:
+            patched_file_data = input_file_data.replace(
+                "$OUTPUT_PATH",
+                str(pathlib.Path(__file__).parent.joinpath("example_data", "results"))
+                + "simvue_thermal",
+            )
+        else:
+            patched_file_data = input_file_data.replace(
+                "$OUTPUT_PATH",
+                str(pathlib.Path(tempd).joinpath("results")) + "simvue_thermal",
+            )
         temp_input_file.write_text(patched_file_data)
 
         # Initialise the MooseRun class as a context manager
@@ -108,9 +115,6 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         parallel=parallel,
         load=load,
         moose_app_path=MOOSE_APP_PATH,
-        moose_load_path=pathlib.Path(__file__).parent.joinpath(
-            "example_data", "results"
-        ),
     )
 
     client = simvue.Client()
@@ -189,12 +193,11 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     )
     assert list(sample_metric.index.levels[0]) == list(range(1, 16, 1))
 
-    temp_dir = tempfile.TemporaryDirectory()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input file uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir.name)
+        assert pathlib.Path(temp_dir.name).joinpath("thermal_bar.i").exists()
 
-    # Check input file uploaded as input
-    client.get_artifacts_as_files(run_id, "input", temp_dir.name)
-    assert pathlib.Path(temp_dir.name).joinpath("thermal_bar.i").exists()
-
-    # Check results uploaded as output
-    client.get_artifacts_as_files(run_id, "output", temp_dir.name)
-    assert pathlib.Path(temp_dir.name).joinpath("simvue_thermal.e").exists()
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir.name)
+        assert pathlib.Path(temp_dir.name).joinpath("simvue_thermal.e").exists()

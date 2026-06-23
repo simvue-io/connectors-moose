@@ -167,15 +167,14 @@ class MooseRun(WrappedRun):
         self.update_metadata(input_metadata)
 
         # Try to retrieve some useful things
-        if not self._loading_historic_run:
-            file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
-            if not file_base:
-                raise KeyError(
-                    "Could not find file_base in your MOOSE file.\n"
-                    "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
-                )
-            _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
-            self._output_dir_path = pathlib.Path(_out_dir_path)
+        file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
+        if not file_base:
+            raise KeyError(
+                "Could not find file_base in your MOOSE file.\n"
+                "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
+            )
+        _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
+        self._output_dir_path = pathlib.Path(_out_dir_path)
 
         if not input_metadata[prefix].get("Executioner", None):
             print(
@@ -587,7 +586,6 @@ class MooseRun(WrappedRun):
     def load(
         self,
         moose_file_path: pydantic.FilePath,
-        results_dir_path: pydantic.DirectoryPath,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
         track_vector_positions: bool = False,
@@ -598,8 +596,6 @@ class MooseRun(WrappedRun):
         ----------
         moose_file_path : pydantic.FilePath
             Path to the MOOSE configuration file
-        results_dir_path: pydantic.DirectoryPath
-            Path to the directory containing MOOSE results
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             These should be supplied relative to the output directory provided in the MOOSE file.
@@ -613,6 +609,8 @@ class MooseRun(WrappedRun):
         ------
         ValueError
             Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
+        FileNotFoundError
+            Raised if no results directory found at path specified by input file.
 
         """
         if track_vector_positions and not track_vector_postprocessors:
@@ -621,7 +619,6 @@ class MooseRun(WrappedRun):
             )
 
         self.moose_file_path = moose_file_path
-        self._output_dir_path = pathlib.Path(results_dir_path)
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
@@ -635,6 +632,12 @@ class MooseRun(WrappedRun):
 
         # Parse the MOOSE input file
         self._moose_input_parser(pathlib.Path(self.moose_file_path))
+
+        # Check output dir path exists
+        if not self._output_dir_path.exists():
+            raise FileNotFoundError(
+                f"Could not find results at path specified in input file - '{self._output_dir_path}'."
+            )
 
         log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
         if log_path.exists():
