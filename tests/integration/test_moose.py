@@ -17,7 +17,6 @@ def run_moose(
     parallel,
     load,
     moose_app_path=None,
-    moose_load_path=None,
 ) -> None:
 
     # Create a temp dir to contain results, and replace path in file
@@ -61,7 +60,6 @@ def run_moose(
             if load:
                 run.load(
                     moose_file_path=temp_input_file,
-                    results_dir_path=moose_load_path,
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,
                     track_vector_positions=False,
@@ -195,9 +193,9 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Check input file uploaded as input
-        client.get_artifacts_as_files(run_id, "input", temp_dir.name)
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
         assert pathlib.Path(temp_dir.name).joinpath("thermal_bar.i").exists()
 
         # Check results uploaded as output
-        client.get_artifacts_as_files(run_id, "output", temp_dir.name)
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
         assert pathlib.Path(temp_dir.name).joinpath("simvue_thermal.e").exists()
