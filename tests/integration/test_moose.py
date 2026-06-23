@@ -53,7 +53,7 @@ def run_moose(
 
             if load:
                 run.load(
-                    moose_file_path=moose_file_path,
+                    moose_file_path=temp_input_file,
                     results_dir_path=moose_load_path,
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,

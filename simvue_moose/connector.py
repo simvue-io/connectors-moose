@@ -167,14 +167,15 @@ class MooseRun(WrappedRun):
         self.update_metadata(input_metadata)
 
         # Try to retrieve some useful things
-        file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
-        if not file_base:
-            raise KeyError(
-                "Could not find file_base in your MOOSE file.\n"
-                "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
-            )
-        _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
-        self._output_dir_path = pathlib.Path(_out_dir_path)
+        if not self._loading_historic_run:
+            file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
+            if not file_base:
+                raise KeyError(
+                    "Could not find file_base in your MOOSE file.\n"
+                    "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
+                )
+            _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
+            self._output_dir_path = pathlib.Path(_out_dir_path)
 
         if not input_metadata[prefix].get("Executioner", None):
             print(
