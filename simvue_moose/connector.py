@@ -509,7 +509,7 @@ class MooseRun(WrappedRun):
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
             files_to_upload = (
-                self._output_dir_path.joinpath(file) for file in self.self.upload_files
+                self._output_dir_path.joinpath(file) for file in self.upload_files
             )
 
         for file in files_to_upload:

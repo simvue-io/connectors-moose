@@ -5,9 +5,11 @@ from unittest.mock import patch, PropertyMock
 import tempfile
 import uuid
 import simvue
+from simvue.exception import ObjectNotFoundError
 import filecmp
 import time
 import threading
+import pytest
 
 
 def mock_moose_process(self, *_, **__):
@@ -30,7 +32,6 @@ def test_moose_file_upload(folder_setup):
     Check that Exodus file is correctly uploaded as an artifact once simulation is complete.
     """
     name = "test_moose_file_upload-%s" % str(uuid.uuid4())
-    temp_dir = tempfile.TemporaryDirectory(prefix="moose_test")
     with MooseRun() as run:
         run.config(disable_resources_metrics=True)
         run.init(name=name, folder=folder_setup)
@@ -40,17 +41,43 @@ def test_moose_file_upload(folder_setup):
             moose_file_path=pathlib.Path(__file__),
         )
 
-        client = simvue.Client()
+    client = simvue.Client()
 
-        # Retrieve Exodus and CSV file from server and compare with local copies
-        client.get_artifacts_as_files(run_id, "output", temp_dir.name)
-        comparison = filecmp.dircmp(
-            pathlib.Path(__file__).parent.joinpath("example_data", "moose_outputs"),
-            temp_dir.name,
+    # Retrieve Exodus and CSV file from server and compare with local copies
+    with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath(pathlib.Path(__file__).name).exists()
+        assert pathlib.Path(temp_dir).joinpath("moose_test.csv").exists()
+        assert pathlib.Path(temp_dir).joinpath("moose_test.e").exists()
+
+
+@patch.object(MooseRun, "_moose_input_parser", mock_input_parser)
+@patch.object(MooseRun, "add_process", mock_moose_process)
+def test_moose_file_upload_specific_files(folder_setup):
+    """
+    Check that ony specified files are uploaded
+    """
+    name = "test_moose_file_upload-%s" % str(uuid.uuid4())
+    with MooseRun() as run:
+        run.config(disable_resources_metrics=True)
+        run.init(name=name, folder=folder_setup)
+        run_id = run.id
+        run.launch(
+            moose_application_path=pathlib.Path(__file__),
+            moose_file_path=pathlib.Path(__file__),
+            upload_files=["moose_test.csv"],
         )
-        assert not (
-            comparison.diff_files or comparison.left_only or comparison.right_only
-        )
+
+    client = simvue.Client()
+
+    with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
+        # Check specified file uploaded, others are not
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("moose_test.csv").exists()
+        assert not pathlib.Path(temp_dir).joinpath("moose_test.e").exists()
+        with pytest.raises(ObjectNotFoundError):
+            client.get_artifacts_as_files(run_id, "input", temp_dir)
 
 
 def mock_aborted_moose_process(self, *_, **__):
@@ -83,7 +110,6 @@ def test_moose_file_upload_after_abort(folder_setup):
     Check that outputs are uploaded if the simulation is aborted early by Simvue
     """
     name = "test_moose_file_upload_after_abort-%s" % str(uuid.uuid4())
-    temp_dir = tempfile.TemporaryDirectory(prefix="moose_test")
     with MooseRun() as run:
         run.config(disable_resources_metrics=True)
         run.init(name=name, folder=folder_setup)
@@ -99,10 +125,13 @@ def test_moose_file_upload_after_abort(folder_setup):
     runtime = client.get_run(run_id).runtime
     assert runtime.tm_sec < 30
 
-    # Check files correctly uploaded after an abort
-    client.get_artifacts_as_files(run_id, "output", temp_dir.name)
-    comparison = filecmp.dircmp(
-        pathlib.Path(__file__).parent.joinpath("example_data", "moose_outputs"),
-        temp_dir.name,
-    )
-    assert not (comparison.diff_files or comparison.left_only or comparison.right_only)
+    with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
+        # Check files correctly uploaded after an abort
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        comparison = filecmp.dircmp(
+            pathlib.Path(__file__).parent.joinpath("example_data", "moose_outputs"),
+            temp_dir,
+        )
+        assert not (
+            comparison.diff_files or comparison.left_only or comparison.right_only
+        )
