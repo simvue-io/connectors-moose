@@ -83,6 +83,7 @@ class MooseRun(WrappedRun):
         """
         self.moose_application_path: pydantic.FilePath = None
         self.moose_file_path: pydantic.FilePath = None
+        self.workdir_path: pathlib.Path = None
         self.upload_files: list[str] | None = None
         self.track_vector_postprocessors: bool = None
         self.track_vector_positions: bool = None
@@ -112,7 +113,48 @@ class MooseRun(WrappedRun):
             server_profile=server_profile,
         )
 
-    def _moose_input_parser(self, input_file: pathlib.Path):
+    def _find_results_dir(
+        self, file_base: str | None = None
+    ) -> tuple[pathlib.Path, str]:
+        """Find the directory and file prefix which results from the MOOSE file will be stored with.
+
+        Should account for the following cases:
+            - No `file_base` provided - output to working dir, file prefix is input file stem
+            - Absolute `file_base` - set this as the output dir and prefix
+            - Relative `file_base` - put files relative to working_dir
+
+        Parameters
+        ----------
+        file_base: str | None
+            The file_base defined in the MOOSE input file, if present
+
+        Returns
+        -------
+        pathlib.Path
+            The path to the output directory where results will be generated
+        str
+            The file prefix which results will be generated with
+
+        """
+        if not file_base:
+            # Uses working dir, with moose file name stem as prefix
+            return self.workdir_path, self.moose_file_path.stem
+
+        # Try splitting on final slash
+        split = file_base.rsplit("/", maxsplit=1)
+        # If not split, no slashes, so only contains file prefix
+        if len(split) < 2:
+            return self.workdir_path, split[0]
+
+        dir_path, results_prefix = split
+
+        # Check if absolute path
+        if dir_path.startswith("/"):
+            return pathlib.Path(dir_path), results_prefix
+        # Otherwise, relative path, should be relative to working dir
+        return self.workdir_path.joinpath(dir_path).resolve(), results_prefix
+
+    def _moose_input_parser(self, input_file: pathlib.Path) -> dict[str, typing.Any]:
         """Parse MOOSE input file, and create a dictionary of metadata with dot notation representing indentation of keys.
 
         Parameters
@@ -120,16 +162,15 @@ class MooseRun(WrappedRun):
         input_file: pathlib.Path
             The path to the MOOSE input file
 
-        Raises
-        ------
-        KeyError
-            Raised if there is no 'file_base' parameter in the MOOSE file Output section, since the connector requires this to find output files.
+        Returns
+        -------
+        dict[str, typing.Any]
+            The MOOSE input file as a dictionary of metadata
 
         """
         input_metadata = {}
-        prefix = input_file.name.split(".")[0]
         # Will make a list of keys for each value to create a nested dict
-        keys = [prefix]
+        keys = []
 
         with open(input_file, "r") as file:
             for line in file:
@@ -164,30 +205,22 @@ class MooseRun(WrappedRun):
                         match.group(1)
                     ] = val
 
-        self.update_metadata(input_metadata)
-
-        # Try to retrieve some useful things
-        file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
-        if not file_base:
-            raise KeyError(
-                "Could not find file_base in your MOOSE file.\n"
-                "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
-            )
-        _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
-        self._output_dir_path = pathlib.Path(_out_dir_path)
-
-        if not input_metadata[prefix].get("Executioner", None):
+        if not input_metadata.get("Executioner", None):
             print(
                 "No Executioner block detected in your MOOSE input file - falling back to log times and steps."
             )
 
-        elif _dt := input_metadata[prefix]["Executioner"].get("dt", None):
+        elif _dt := input_metadata["Executioner"].get("dt", None):
             try:
                 self._dt = float(_dt)
             except ValueError:
                 print(
                     "WARNING: Could not interpret Executioner.dt as a number, falling back to log times and steps. To correct this, make sure 'dt' is a number in your MOOSE input file."
                 )
+
+        self.update_metadata({self.moose_file_path.stem: input_metadata})
+
+        return input_metadata
 
     @mp_file_parser.file_parser
     def _moose_header_parser(
@@ -421,9 +454,6 @@ class MooseRun(WrappedRun):
         ):
             self.save_file(self.moose_file_path, category="input")
 
-        # Parse the MOOSE input file
-        self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
         # Save the MOOSE Makefile
         if (
             pathlib.Path(self.moose_application_path)
@@ -452,6 +482,7 @@ class MooseRun(WrappedRun):
             "moose_simulation",
             *command,
             completion_trigger=self._trigger,
+            cwd=self.workdir_path,
         )
 
     def _during_simulation(self):
@@ -525,6 +556,7 @@ class MooseRun(WrappedRun):
         self,
         moose_application_path: pydantic.FilePath,
         moose_file_path: pydantic.FilePath,
+        workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
         track_vector_positions: bool = False,
@@ -541,6 +573,11 @@ class MooseRun(WrappedRun):
             Path to the MOOSE application file
         moose_file_path : pydantic.FilePath
             Path to the MOOSE configuration file
+        workdir_path : str | pathlib.Path | None, optional
+            Path to a directory which you would like MOOSE to run in, by default None
+            This is where FDS will generate the results from the simulation
+            If a directory does not already exist at this path, it will be created
+            Uses the current working directory by default.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             These should be supplied relative to the output directory provided in the MOOSE file.
@@ -571,6 +608,9 @@ class MooseRun(WrappedRun):
 
         self.moose_application_path = moose_application_path
         self.moose_file_path = moose_file_path
+        self.workdir_path = (
+            pathlib.Path(workdir_path) if workdir_path else pathlib.Path.cwd()
+        )
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
@@ -579,6 +619,13 @@ class MooseRun(WrappedRun):
         self.num_processors = num_processors
         self.mpiexec_env_vars = mpiexec_env_vars or {}
 
+        # Parse the MOOSE input file
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
+
+        # Find the location to output files
+        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
+        self._output_dir_path, self._results_prefix = self._find_results_dir(file_base)
+
         super().launch()
 
     @simvue.utilities.prettify_pydantic
@@ -586,6 +633,7 @@ class MooseRun(WrappedRun):
     def load(
         self,
         moose_file_path: pydantic.FilePath,
+        results_dir: pydantic.DirectoryPath | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
         track_vector_positions: bool = False,
@@ -596,6 +644,9 @@ class MooseRun(WrappedRun):
         ----------
         moose_file_path : pydantic.FilePath
             Path to the MOOSE configuration file
+        results_dir : pydantic.DirectoryPath | None, optional
+            A path to a directory containing MOOSE simulation results to upload
+            By default, will use the location specified in the MOOSE file, or fallback to current working directory if file_base not specified.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             These should be supplied relative to the output directory provided in the MOOSE file.
@@ -609,8 +660,6 @@ class MooseRun(WrappedRun):
         ------
         ValueError
             Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
-        FileNotFoundError
-            Raised if no results directory found at path specified by input file.
 
         """
         if track_vector_positions and not track_vector_postprocessors:
@@ -619,6 +668,7 @@ class MooseRun(WrappedRun):
             )
 
         self.moose_file_path = moose_file_path
+        self.workdir_path = pathlib.Path().cwd()
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
@@ -631,13 +681,19 @@ class MooseRun(WrappedRun):
             self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
-        self._moose_input_parser(pathlib.Path(self.moose_file_path))
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
-        # Check output dir path exists
-        if not self._output_dir_path.exists():
-            raise FileNotFoundError(
-                f"Could not find results at path specified in input file - '{self._output_dir_path}'."
-            )
+        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
+        output_dir_path, self._results_prefix = self._find_results_dir(file_base)
+
+        self._output_dir_path = results_dir if results_dir else output_dir_path
+
+        if output_dir_path.absolute() != self._output_dir_path.absolute():
+            print(f"""
+                  Warning: Output location specified in MOOSE file, '{output_dir_path}'
+                  does not match results dir location given to load, '{self._output_dir_path}.'
+                  Directory provided in MOOSE input file will be ignored.
+                  """)
 
         log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
         if log_path.exists():
