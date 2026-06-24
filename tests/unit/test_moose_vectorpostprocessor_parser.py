@@ -154,6 +154,7 @@ def test_moose_vectorpostprocessor_parser_with_positions(folder_setup):
 
 
 @patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_vector_postprocessor)
 def test_moose_vectorpostprocessor_disabled(folder_setup):
     """

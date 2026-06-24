@@ -13,32 +13,15 @@ MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
 
 def run_moose(
     moose_file_path: pathlib.Path,
+    load_results_dir,
     offline,
     parallel,
     load,
-    moose_app_path=None,
+    moose_app_path,
 ) -> None:
 
     # Create a temp dir to contain results, and replace path in file
     with tempfile.TemporaryDirectory() as tempd:
-        temp_input_file = pathlib.Path(tempd).joinpath(moose_file_path.name)
-        input_file_data = moose_file_path.read_text()
-        if load:
-            patched_file_data = input_file_data.replace(
-                "$OUTPUT_PATH",
-                str(
-                    pathlib.Path(__file__).parent.joinpath(
-                        "example_data", "results", "simvue_thermal"
-                    )
-                ),
-            )
-        else:
-            patched_file_data = input_file_data.replace(
-                "$OUTPUT_PATH",
-                str(pathlib.Path(tempd).joinpath("results", "simvue_thermal")),
-            )
-        temp_input_file.write_text(patched_file_data)
-
         # Initialise the MooseRun class as a context manager
         with MooseRun(mode="offline" if offline else "online") as run:
             # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
@@ -62,7 +45,8 @@ def run_moose(
 
             if load:
                 run.load(
-                    moose_file_path=temp_input_file,
+                    moose_file_path=moose_file_path,
+                    results_dir=load_results_dir,
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,
                     track_vector_positions=False,
@@ -71,7 +55,8 @@ def run_moose(
                 # Then call the .launch() method to start your MOOSE simulation
                 run.launch(
                     moose_application_path=moose_app_path,
-                    moose_file_path=temp_input_file,
+                    moose_file_path=moose_file_path,
+                    workdir_path=pathlib.Path(tempd),
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,
                     track_vector_positions=False,
@@ -111,6 +96,9 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     run_id = run_moose(
         moose_file_path=pathlib.Path(__file__).parent.joinpath(
             "example_data", "thermal_bar.i"
+        ),
+        load_results_dir=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "results"
         ),
         offline=offline,
         parallel=parallel,
