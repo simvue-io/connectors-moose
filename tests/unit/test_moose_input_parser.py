@@ -91,10 +91,15 @@ def test_moose_input_parser(
         run.init(
             name="test_moose_input_parser-%s" % str(uuid.uuid4()), folder=folder_setup
         )
+        run.workdir_path = pathlib.Path.cwd()
+        run.moose_file_path = pathlib.Path(__file__).parent.joinpath(
+            "example_data", f"{file_name}.i"
+        )
         run_id = run.id
-        run._moose_input_parser(
+        input_metadata = run._moose_input_parser(
             pathlib.Path(__file__).parent.joinpath("example_data", f"{file_name}.i")
         )
+        run._moose_input_callback(input_metadata)
 
         client = simvue.Client()
         metadata = client.get_run(run_id).metadata
@@ -115,7 +120,7 @@ def test_moose_input_parser(
             except AttributeError:  # Will get this if the key doesnt exist since it tries to get() on a None, but we are expecting that...
                 continue
 
-        assert run._output_dir_path == pathlib.Path("results")
+        assert run._output_dir_path == pathlib.Path.cwd().joinpath("results")
         assert run._results_prefix == file_name
 
         if file_name in ("example_input_1", "example_input_3"):

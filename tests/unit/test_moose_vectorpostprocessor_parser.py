@@ -47,7 +47,8 @@ def mock_vector_postprocessor(self, *_, **__):
     thread.start()
 
 
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: None)
+@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_vector_postprocessor)
 def test_moose_vectorpostprocessor_parser_no_positions(folder_setup):
     """
@@ -99,7 +100,8 @@ def test_moose_vectorpostprocessor_parser_no_positions(folder_setup):
     assert metric_ints == [366, 549, 641, 694, 729]
 
 
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: None)
+@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_vector_postprocessor)
 def test_moose_vectorpostprocessor_parser_with_positions(folder_setup):
     """
@@ -151,7 +153,7 @@ def test_moose_vectorpostprocessor_parser_with_positions(folder_setup):
     assert metric_values == [1.0, 1.0, 1.0, 1.0, 1.0]
 
 
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: None)
+@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
 @patch.object(MooseRun, "add_process", mock_vector_postprocessor)
 def test_moose_vectorpostprocessor_disabled(folder_setup):
     """

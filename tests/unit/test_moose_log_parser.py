@@ -37,7 +37,7 @@ def mock_moose_process(self, *_, **__):
     thread.start()
 
 
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: None)
+@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_log_parser(folder_setup):
     """

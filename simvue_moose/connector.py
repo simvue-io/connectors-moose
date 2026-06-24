@@ -204,6 +204,20 @@ class MooseRun(WrappedRun):
                     reduce(lambda d, key: d.setdefault(key, {}), keys, input_metadata)[
                         match.group(1)
                     ] = val
+        return input_metadata
+
+    def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
+        """Extract useful information from the MOOSE input file metadata.
+
+        Parameters
+        ----------
+        input_metadata: dict[str, typing.Any]
+            The metadata from the MOOSE input file
+
+        """
+        # Find the location to output files
+        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
+        self._output_dir_path, self._results_prefix = self._find_results_dir(file_base)
 
         if not input_metadata.get("Executioner", None):
             print(
@@ -219,8 +233,6 @@ class MooseRun(WrappedRun):
                 )
 
         self.update_metadata({self.moose_file_path.stem: input_metadata})
-
-        return input_metadata
 
     @mp_file_parser.file_parser
     def _moose_header_parser(
@@ -440,6 +452,12 @@ class MooseRun(WrappedRun):
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
 
+        # Parse the MOOSE input file
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
+
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
+
         # Add alert for a non converging step
         self.create_event_alert(
             name="step_not_converged",
@@ -619,13 +637,6 @@ class MooseRun(WrappedRun):
         self.num_processors = num_processors
         self.mpiexec_env_vars = mpiexec_env_vars or {}
 
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Find the location to output files
-        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
-        self._output_dir_path, self._results_prefix = self._find_results_dir(file_base)
-
         super().launch()
 
     @simvue.utilities.prettify_pydantic
@@ -683,17 +694,18 @@ class MooseRun(WrappedRun):
         # Parse the MOOSE input file
         input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
-        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
-        output_dir_path, self._results_prefix = self._find_results_dir(file_base)
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
 
         self._output_dir_path = results_dir if results_dir else output_dir_path
 
-        if output_dir_path.absolute() != self._output_dir_path.absolute():
+        if results_dir and results_dir.absolute() != self._output_dir_path.absolute():
             print(f"""
                   Warning: Output location specified in MOOSE file, '{output_dir_path}'
                   does not match results dir location given to load, '{self._output_dir_path}.'
                   Directory provided in MOOSE input file will be ignored.
                   """)
+            self._output_dir_path = results_dir
 
         log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
         if log_path.exists():
