@@ -9,15 +9,16 @@ import re
 import time
 import typing
 from functools import reduce
+from itertools import islice
 
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
-
 import multiparser.parsing.file as mp_file_parser
 import multiparser.parsing.tail as mp_tail_parser
+import pandas
 import pydantic
 import simvue
 from simvue_connector.connector import WrappedRun
@@ -304,8 +305,9 @@ class MooseRun(WrappedRun):
 
         """
         metrics = {}
+        current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
-        file_name = pathlib.Path(input_file).name
+        file_name = pathlib.Path(input_file).stem
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_", ""
         ).rsplit("_", 1)
@@ -314,32 +316,53 @@ class MooseRun(WrappedRun):
         time_file = f"{input_file.rsplit('_', 1)[0]}_time.csv"
         if pathlib.Path(time_file).exists():
             with open(time_file, newline="\n") as in_t:
-                final_line = [in_t.readlines()[-1]]
-                current_time_data = next(csv.reader(final_line))
-                metrics["time"] = current_time_data[0]
-                metrics["step"] = current_time_data[1]
+                reader = csv.reader(in_t)
+                current_time_data = next(
+                    islice(reader, serial_num, serial_num + 1), None
+                )
+        if current_time_data:
+            metrics["time"] = current_time_data[0]
+            metrics["step"] = current_time_data[1]
         else:
-            metrics["step"] = int(serial_num.split(".")[0])
+            metrics["step"] = int(serial_num)
             if self._dt:
                 metrics["time"] = metrics["step"] * self._dt
 
-        with open(input_file, newline="") as in_f:
-            read_csv = csv.DictReader(in_f)
+        data = pandas.read_csv(input_file)
 
-            for csv_data in read_csv:
-                if not self.track_vector_positions:
-                    csv_data.pop("x", None)
-                    csv_data.pop("y", None)
-                    csv_data.pop("z", None)
-                    csv_data.pop("radius", None)
+        varying_dims = []
+        for coord in ("x", "y", "z", "radius"):
+            if coord not in data.columns:
+                continue
 
-                if _id := csv_data.pop("id", None):
-                    metrics.update(
-                        {
-                            f"{vector_name}.{key}.{_id}": value
-                            for (key, value) in csv_data.items()
-                        }
-                    )
+            dimension = data.pop(coord)
+
+            if dimension.nunique() == 0:
+                continue
+            elif dimension.nunique() != 1:
+                varying_dims.append(dimension)
+
+        _id = data.pop("id") if "id" in data.columns else None
+        if len(varying_dims) < 1 and _id is not None and _id.nunique() > 0:
+            varying_dims.append(_id)
+
+        if len(varying_dims) > 1:
+            print(varying_dims)
+            print("Varying in too many dims!")
+            return {}, {}
+        if len(varying_dims) < 1:
+            print("no dims found")
+            return {}, {}
+
+        for col in data.columns:
+            # Assign to grid if required
+            if col not in self._grids.keys():
+                self.assign_metric_to_grid(
+                    metric_name=f"{vector_name}.{col}",
+                    axes_ticks=[varying_dims[0].values],
+                    axes_labels=[varying_dims[0].name],
+                )
+            metrics[f"{vector_name}.{col}"] = data[col].values
 
         return {}, metrics
 
@@ -421,7 +444,7 @@ class MooseRun(WrappedRun):
 
     def _per_metric_callback(
         self, csv_data: typing.Dict[str, float], sim_metadata: typing.Dict[str, str]
-    ):
+    ) -> None:
         """Monitor each line in the results CSV file, and add data from it to Simvue Metrics.
 
         Parameters
@@ -432,6 +455,9 @@ class MooseRun(WrappedRun):
             The metadata about when this line was read by Multiparser
 
         """
+        if not csv_data:
+            return
+
         metric_time = csv_data.pop("time", None)
         metric_step = csv_data.pop("step", None)
         timestamp = sim_metadata.get("timestamp", "").replace(" ", "T")
