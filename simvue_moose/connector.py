@@ -40,7 +40,7 @@ class MooseRun(WrappedRun):
     _patterns: dict[str, typing.Pattern] = {
         "time_step": re.compile(r"Time Step.*"),
         "converged": re.compile(r"\s*Solve Converged!\s*"),
-        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
+        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*", re.IGNORECASE),
         "terminated": re.compile(
             r"Terminator '.+' is causing the execution to terminate."
         ),
