@@ -103,6 +103,7 @@ class MooseRun(WrappedRun):
         self._nonlinear = 0
         self._linear = 0
         self._dt = None
+        self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
 
         super().__init__(
@@ -317,6 +318,7 @@ class MooseRun(WrappedRun):
         if pathlib.Path(time_file).exists():
             with open(time_file, newline="\n") as in_t:
                 reader = csv.reader(in_t)
+                # Read line in time file corresponding to this step
                 current_time_data = next(
                     islice(reader, serial_num, serial_num + 1), None
                 )
@@ -342,16 +344,28 @@ class MooseRun(WrappedRun):
             elif dimension.nunique() != 1:
                 varying_dims.append(dimension)
 
-        _id = data.pop("id") if "id" in data.columns else None
-        if len(varying_dims) < 1 and _id is not None and _id.nunique() > 0:
-            varying_dims.append(_id)
+        if "id" in data.columns:
+            _id = data.pop("id")
+            if len(varying_dims) < 1 and _id.nunique() > 0:
+                # Fallback to using ID as axis if no coord found
+                varying_dims.append(_id)
 
         if len(varying_dims) > 1:
-            print(varying_dims)
-            print("Varying in too many dims!")
+            print(
+                f"Warning: VectorPostProcessor {vector_name} varies in more than one dimension, which is unsupported. Ignoring..."
+            )
+            self._unsupported_vectors.append(vector_name)
+            if not self._loading_historic_run:
+                self.file_monitor.exclude(
+                    str(
+                        self._output_dir_path.joinpath(
+                            f"{self._results_prefix}_{vector_name}_[0-9]*.csv"
+                        )
+                    )
+                )
             return {}, {}
         if len(varying_dims) < 1:
-            print("no dims found")
+            # Likely an empty file representing initial conditions, ignore...
             return {}, {}
 
         for col in data.columns:
@@ -762,8 +776,11 @@ class MooseRun(WrappedRun):
         if self.track_vector_postprocessors:
             csv_paths = self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
             for path in csv_paths:
-                if path == self._output_dir_path.joinpath(
-                    f"{self._results_prefix}_*_time.csv"
+                if path.match(f"{self._results_prefix}_*_time.csv") or any(
+                    (
+                        path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
+                        for vector_name in self._unsupported_vectors
+                    )
                 ):
                     continue
                 _, data = self._vector_postprocessor_parser(input_file=str(path))
