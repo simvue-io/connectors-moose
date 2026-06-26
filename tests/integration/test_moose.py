@@ -6,6 +6,7 @@ import simvue
 import uuid
 from simvue_moose.connector import MooseRun
 from simvue.sender import Sender
+from simvue.api.objects import GridMetrics
 
 # Set this variable to wherever your MOOSE app is located:
 MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
@@ -49,7 +50,6 @@ def run_moose(
                     results_dir=load_results_dir,
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,
-                    track_vector_positions=False,
                 )
             else:
                 # Then call the .launch() method to start your MOOSE simulation
@@ -59,7 +59,6 @@ def run_moose(
                     workdir_path=pathlib.Path(tempd),
                     # You can optionally choose to track VectorPostProcessor outputs too:
                     track_vector_postprocessors=True,
-                    track_vector_positions=False,
                     # And you can choose whether to run it in parallel
                     run_in_parallel=parallel,
                     num_processors=2,
@@ -164,7 +163,15 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     assert list(sample_metric.index.levels[0]) == list(range(0, 16, 1))
 
     # Check metrics uploaded from VectorPostProcessor CSV
-    assert metrics["temperature_along_bar.T.1"]["max"] > 498
+    metric = next(
+        GridMetrics.get(runs=[run_id], metrics=["temperature_along_bar.T"], step=15)
+    )
+    assert len(metric["array"]) == 3
+    assert metric["array"][1] > 498
+
+    import pdb
+
+    pdb.set_trace()
 
     # Check time and step data is correct - starts from first step, since file PostProcessor file 0000 is blank
     sample_metric = client.get_metric_values(

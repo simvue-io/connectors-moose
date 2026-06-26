@@ -68,7 +68,6 @@ with MooseRun() as run:
         # Optionally choose which files to upload:
         # You can optionally choose to track VectorPostProcessor outputs too:
         track_vector_postprocessors=True,
-        track_vector_positions=False,
         # And you can choose whether to run it in parallel:
         run_in_parallel=True,
         num_processors=2,

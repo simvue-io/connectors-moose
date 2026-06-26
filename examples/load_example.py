@@ -51,7 +51,6 @@ with MooseRun() as run:
         results_dir=pathlib.Path(__file__).parent.joinpath("results"),
         # You can optionally choose to track VectorPostProcessor outputs too:
         track_vector_postprocessors=True,
-        track_vector_positions=False,
         # Optionally choose which files to upload, by default uploads all results
         # upload_files = ["simvue_thermal.e"]
     )

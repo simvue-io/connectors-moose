@@ -87,7 +87,6 @@ class MooseRun(WrappedRun):
         self.workdir_path: pathlib.Path = None
         self.upload_files: list[str] | None = None
         self.track_vector_postprocessors: bool = None
-        self.track_vector_positions: bool = None
         self.moose_env_vars: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
@@ -619,7 +618,6 @@ class MooseRun(WrappedRun):
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
-        track_vector_positions: bool = False,
         moose_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
@@ -644,8 +642,6 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        track_vector_positions: bool, optional
-            Whether to create metrics for the positions given in Vector PostProcessor output at each time step (x, y, z, radius), by default False
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any environment variables to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
@@ -655,17 +651,7 @@ class MooseRun(WrappedRun):
         mpiexec_env_vars : typing.Optional[typing.Dict[str, typing.Any]]
             Any environment variables to pass to mpiexec on startup if running in parallel, by default None
 
-        Raises
-        ------
-        ValueError
-            Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
-
         """
-        if track_vector_positions and not track_vector_postprocessors:
-            raise ValueError(
-                "Vector positions can only be tracked if vector postprocessor tracking is enabled."
-            )
-
         self.moose_application_path = moose_application_path
         self.moose_file_path = moose_file_path
         self.workdir_path = (
@@ -673,7 +659,6 @@ class MooseRun(WrappedRun):
         )
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.track_vector_positions = track_vector_positions
         self.moose_env_vars = moose_env_vars or {}
         self.run_in_parallel = run_in_parallel
         self.num_processors = num_processors
@@ -689,7 +674,6 @@ class MooseRun(WrappedRun):
         results_dir: pydantic.DirectoryPath | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
-        track_vector_positions: bool = False,
     ):
         """Command to load a set of results from a MOOSE simulation into Simvue.
 
@@ -706,25 +690,12 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        track_vector_positions: bool, optional
-            Whether to create metrics for the positions given in Vector PostProcessor output at each time step (x, y, z, radius), by default False
-
-        Raises
-        ------
-        ValueError
-            Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
 
         """
-        if track_vector_positions and not track_vector_postprocessors:
-            raise ValueError(
-                "Vector positions can only be tracked if vector postprocessor tracking is enabled."
-            )
-
         self.moose_file_path = moose_file_path
         self.workdir_path = pathlib.Path().cwd()
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.track_vector_positions = track_vector_positions
         self._loading_historic_run = True
 
         # Save the MOOSE file for this run to the Simvue server
