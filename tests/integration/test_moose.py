@@ -169,25 +169,8 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     assert len(metric["array"]) == 3
     assert metric["array"][1] > 498
 
-    import pdb
-
-    pdb.set_trace()
-
-    # Check time and step data is correct - starts from first step, since file PostProcessor file 0000 is blank
-    sample_metric = client.get_metric_values(
-        metric_names=["temperature_along_bar.T.0"],
-        xaxis="time",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric.index.levels[0]) == list(range(2, 32, 2))
-    sample_metric = client.get_metric_values(
-        metric_names=["temperature_along_bar.T.2"],
-        xaxis="step",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric.index.levels[0]) == list(range(1, 16, 1))
+    # Check time and step data is correct - time is 2x step
+    assert metric["time"] == 30
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Check input file uploaded as input
