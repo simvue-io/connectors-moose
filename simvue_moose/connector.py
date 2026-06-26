@@ -397,14 +397,13 @@ class MooseRun(WrappedRun):
         """
         # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
         if any(
-            key in ("time_step", "converged", "non_converged", "terminated")
-            for key in log_data.keys()
+            key in ("time_step", "converged", "terminated") for key in log_data.keys()
         ):
-            try:
-                self.log_event(list(log_data.values())[0].rstrip().title())
-            except RuntimeError as e:
-                self._error(e)
-                return False
+            self.log_event(list(log_data.values())[0].rstrip())
+
+        if "non_converged" in log_data.keys():
+            # Title case so alert can match
+            self.log_event(list(log_data.values())[0].rstrip().title())
 
         if "time_step" in log_data.keys():
             self._time = time.time()
