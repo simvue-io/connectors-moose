@@ -7,29 +7,36 @@ from unittest.mock import patch
 import uuid
 import pathlib
 import shutil
+from simvue.api.objects import GridMetrics
+import numpy
+import pandas
+import pytest
 
 
-def mock_vector_postprocessor(self, *_, **__):
+def mock_vector_postprocessor(self, *cmd_args, **__):
     """
     Mock process for creating VectorPostProcessor output CSV files.
     There is one of these CSV files written all at once for each timestep.
     """
 
     def write_to_vector_pp():
-        _timefile_lines = (
-            pathlib.Path(__file__)
-            .parent.joinpath("example_data", "moose_temps_time.csv")
-            .open("r")
-            .readlines()
-        )
-        _timefile = (
-            pathlib.Path(self._output_dir_path)
-            .joinpath("moose_temps_time.csv")
-            .open("w", buffering=1)
-        )
-        _timefile.write(_timefile_lines[0])
+
+        if cmd_args[-1] == "--time-file":
+            _timefile_lines = (
+                pathlib.Path(__file__)
+                .parent.joinpath("example_data", "moose_temps_time.csv")
+                .open("r")
+                .readlines()
+            )
+            _timefile = (
+                pathlib.Path(self._output_dir_path)
+                .joinpath("moose_temps_time.csv")
+                .open("w", buffering=1)
+            )
+            _timefile.write(_timefile_lines[0])
         for num in range(0, 6, 1):
-            _timefile.write(_timefile_lines[num + 1])
+            if cmd_args[-1] == "--time-file":
+                _timefile.write(_timefile_lines[num + 1])
             shutil.copy(
                 pathlib.Path(__file__).parent.joinpath(
                     "example_data", f"moose_temps_000{num}.csv"
@@ -39,7 +46,8 @@ def mock_vector_postprocessor(self, *_, **__):
                 ),
             )
             time.sleep(0.5)
-        _timefile.close()
+        if cmd_args[-1] == "--time-file":
+            _timefile.close()
         self._trigger.set()
         return
 
@@ -47,13 +55,13 @@ def mock_vector_postprocessor(self, *_, **__):
     thread.start()
 
 
+@pytest.mark.parametrize("write_time_file", [True, False])
 @patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
 @patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_vector_postprocessor)
-def test_moose_vectorpostprocessor_parser_no_positions(folder_setup):
+def test_moose_vectorpostprocessor_parser_no_times(folder_setup, write_time_file):
     """
-    Test values of VectorPostProcessors at each timestep are uploaded as Metrics,
-    when positions are turned off it should not track x, y, or z as metrics.
+    Test values of VectorPostProcessors at each timestep are uploaded as Metrics.
     """
     temp_dir = tempfile.TemporaryDirectory(prefix="moose_test")
     name = "test_moose_vectorpostprocessor_parser-%s" % str(uuid.uuid4())
@@ -64,93 +72,29 @@ def test_moose_vectorpostprocessor_parser_no_positions(folder_setup):
         # Set these here instead of them being read from a MOOSE input file
         run._output_dir_path = pathlib.Path(temp_dir.name)
         run._results_prefix = "moose"
+        run._dt = 2
 
         run.launch(
             moose_application_path=pathlib.Path(__file__),
             moose_file_path=pathlib.Path(__file__),
             track_vector_postprocessors=True,
             track_vector_positions=False,
+            moose_env_vars={"time_file": write_time_file},
         )
 
-    client = simvue.Client()
-
-    # Check that 7 metrics have been created for positions along the bar 0-6
-    metrics_names = client.get_metrics_names(run_id)
-    assert sum(1 for i in metrics_names) == 7
-
-    # Get metric with ID '1', check that time and step values are correct
-    sample_metric_times = client.get_metric_values(
-        metric_names=["temps.T.1"],
-        xaxis="time",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric_times.index.levels[0]) == [2.0, 4.0, 6.0, 8.0, 10.0]
-    sample_metric_steps = client.get_metric_values(
-        metric_names=["temps.T.1"],
-        xaxis="step",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric_steps.index.levels[0]) == [1.0, 2.0, 3.0, 4.0, 5.0]
-
-    # Check that metric values match those given in files
-    metric_values = sample_metric_times["temps.T.1"].tolist()
-    metric_ints = [int(val) for val in metric_values]
-    assert metric_ints == [366, 549, 641, 694, 729]
-
-
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
-@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
-@patch.object(MooseRun, "add_process", mock_vector_postprocessor)
-def test_moose_vectorpostprocessor_parser_with_positions(folder_setup):
-    """
-    Test values of VectorPostProcessors at each timestep are uploaded as Metrics,
-    when positions are turned on it should track x, y, and z metrics.
-    """
-    name = "test_moose_vectorpostprocessor_parser_positions-%s" % str(uuid.uuid4())
-    temp_dir = tempfile.TemporaryDirectory(prefix="moose_test")
-    with MooseRun() as run:
-        run.config(disable_resources_metrics=True)
-        run.init(name=name, folder=folder_setup)
-        run_id = run.id
-        # Set these here instead of them being read from a MOOSE input file
-        run._output_dir_path = pathlib.Path(temp_dir.name)
-        run._results_prefix = "moose"
-
-        run.launch(
-            moose_application_path=pathlib.Path(__file__),
-            moose_file_path=pathlib.Path(__file__),
-            track_vector_postprocessors=True,
-            track_vector_positions=True,
+    # Get time step 1, check values match those in files
+    for num in range(1, 6, 1):
+        print(num)
+        df = pandas.read_csv(
+            pathlib.Path(__file__).parent.joinpath(
+                "example_data", f"moose_temps_000{num}.csv"
+            ),
         )
+        metric = next(GridMetrics.get(runs=[run_id], metrics=["temps.T"], step=num))
+        numpy.testing.assert_almost_equal(df["T"].values, numpy.array(metric["array"]))
 
-    client = simvue.Client()
-
-    # Check that 28 metrics have been created for positions along the bar 0-6
-    # One for each of T, X, Y, Z
-    metrics_names = client.get_metrics_names(run_id)
-    assert sum(1 for i in metrics_names) == 28
-
-    # Get metric with ID '1', check that time and step values are correct
-    sample_metric_times = client.get_metric_values(
-        metric_names=["temps.x.1"],
-        xaxis="time",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric_times.index.levels[0]) == [2.0, 4.0, 6.0, 8.0, 10.0]
-    sample_metric_steps = client.get_metric_values(
-        metric_names=["temps.x.1"],
-        xaxis="step",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric_steps.index.levels[0]) == [1.0, 2.0, 3.0, 4.0, 5.0]
-
-    # Check that the x position is recorded, and is set to 1 for id=1 throughout
-    metric_values = sample_metric_times["temps.x.1"].tolist()
-    assert metric_values == [1.0, 1.0, 1.0, 1.0, 1.0]
+        # Time should be 2 x step due to values in time file
+        assert metric["time"] == 2 * num
 
 
 @patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})

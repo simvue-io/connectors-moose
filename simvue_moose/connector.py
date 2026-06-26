@@ -312,6 +312,7 @@ class MooseRun(WrappedRun):
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_", ""
         ).rsplit("_", 1)
+        serial_num = int(serial_num)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
         time_file = f"{input_file.rsplit('_', 1)[0]}_time.csv"
@@ -319,8 +320,9 @@ class MooseRun(WrappedRun):
             with open(time_file, newline="\n") as in_t:
                 reader = csv.reader(in_t)
                 # Read line in time file corresponding to this step
+                # + 1 to skip header
                 current_time_data = next(
-                    islice(reader, serial_num, serial_num + 1), None
+                    islice(reader, serial_num + 1, serial_num + 2), None
                 )
         if current_time_data:
             metrics["time"] = current_time_data[0]
