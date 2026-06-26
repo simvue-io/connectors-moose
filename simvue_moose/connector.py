@@ -401,7 +401,7 @@ class MooseRun(WrappedRun):
             for key in log_data.keys()
         ):
             try:
-                self.log_event(list(log_data.values())[0].rstrip())
+                self.log_event(list(log_data.values())[0].rstrip().title())
             except RuntimeError as e:
                 self._error(e)
                 return False
