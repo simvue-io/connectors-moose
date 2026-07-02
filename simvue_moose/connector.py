@@ -11,6 +11,8 @@ import typing
 from functools import reduce
 from itertools import islice
 
+import numpy
+
 try:
     from typing import Self
 except ImportError:
@@ -290,7 +292,7 @@ class MooseRun(WrappedRun):
         self,
         input_file: str,
         **__,
-    ) -> tuple[dict[str, str], dict[str, float | int]]:
+    ) -> tuple[dict[str, str], dict[str, numpy.ndarray]]:
         """Parse data from VectorPostProcessor CSV files.
 
         Parameters
@@ -302,7 +304,7 @@ class MooseRun(WrappedRun):
 
         Returns
         -------
-        tuple[dict[str, str], dict[str, float | int]]
+        tuple[dict[str, str], dict[str, numpy.ndarray]]
             A dictionary of metadata and data contained in the CSV file
 
         """
@@ -372,14 +374,15 @@ class MooseRun(WrappedRun):
             return {}, {}
 
         for col in data.columns:
+            metric_name = f"{vector_name}.{col}"
             # Assign to grid if required
-            if col not in self._grids.keys():
+            if metric_name not in self._grids.keys():
                 self.assign_metric_to_grid(
-                    metric_name=f"{vector_name}.{col}",
+                    metric_name=metric_name,
                     axes_ticks=[varying_dims[0].values],
                     axes_labels=[varying_dims[0].name],
                 )
-            metrics[f"{vector_name}.{col}"] = data[col].values
+            metrics[metric_name] = data[col].values
 
         return {}, metrics
 
@@ -459,13 +462,15 @@ class MooseRun(WrappedRun):
             )
 
     def _per_metric_callback(
-        self, csv_data: typing.Dict[str, float], sim_metadata: typing.Dict[str, str]
+        self,
+        csv_data: typing.Dict[str, float | numpy.ndarray],
+        sim_metadata: typing.Dict[str, str],
     ) -> None:
         """Monitor each line in the results CSV file, and add data from it to Simvue Metrics.
 
         Parameters
         ----------
-        csv_data : typing.Dict[str, float]
+        csv_data : typing.Dict[str, float | numpy.ndarray]
             The data from the latest line in the CSV file
         sim_metadata : typing.Dict[str, str]
             The metadata about when this line was read by Multiparser
