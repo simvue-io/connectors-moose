@@ -35,6 +35,8 @@ class MooseRun(WrappedRun):
             name="moose_simulation",
         )
         run.launch(...)
+
+    NOTE: The connector currently does not support running MOOSE on Windows.
     """
 
     _patterns: dict[str, typing.Pattern] = {
@@ -529,13 +531,17 @@ class MooseRun(WrappedRun):
             command += ["mpiexec", "-n", str(self.num_processors)]
             command += format_command_env_vars(self.mpiexec_env_vars)
         command += [
-            str(self.moose_application_path),
+            str(self.moose_application_path.absolute()),
             "-i",
-            str(self.moose_file_path),
+            str(self.moose_file_path.absolute()),
             "--color",
             "off",
         ]
         command += format_command_env_vars(self.moose_env_vars)
+
+        # Ensure workdir path exists
+        self.workdir_path.mkdir(parents=True, exist_ok=True)
+
         self.add_process(
             "moose_simulation",
             *command,
@@ -632,7 +638,7 @@ class MooseRun(WrappedRun):
             Path to the MOOSE configuration file
         workdir_path : str | pathlib.Path | None, optional
             Path to a directory which you would like MOOSE to run in, by default None
-            This is where FDS will generate the results from the simulation
+            This is where MOOSE will generate the results from the simulation
             If a directory does not already exist at this path, it will be created
             Uses the current working directory by default.
         upload_files : list[str] | None, optional
