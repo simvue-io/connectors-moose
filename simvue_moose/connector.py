@@ -39,7 +39,7 @@ class MooseRun(WrappedRun):
     _patterns: dict[str, typing.Pattern] = {
         "time_step": re.compile(r"Time Step.*"),
         "converged": re.compile(r"\s*Solve Converged!\s*"),
-        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
+        "non_converged": re.compile(r"\s*Solve Did NOT Converge!\s*"),
         "terminated": re.compile(
             r"Terminator '.+' is causing the execution to terminate."
         ),
@@ -391,7 +391,7 @@ class MooseRun(WrappedRun):
         metric_step = csv_data.pop("step", None)
         timestamp = sim_metadata.get("timestamp", "").replace(" ", "T")
 
-        if self._dt and not metric_step:
+        if self._dt and metric_step is None:
             # Has come from a scalar PostProcessor, can assume step = time / dt
             metric_step = int(metric_time / self._dt)
 
@@ -417,7 +417,7 @@ class MooseRun(WrappedRun):
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path in self.upload_files
+            self.upload_files is None or str(self.moose_file_path) in self.upload_files
         ):
             self.save_file(self.moose_file_path, category="input")
 
@@ -648,7 +648,6 @@ class MooseRun(WrappedRun):
             # Parse line by line, matching regex patterns, upload as Events if found
             with open(log_path) as file:
                 file_lines = file.readlines()
-                file_lines = list(filter(None, file_lines))
 
                 for line in file_lines:
                     for label, pattern in self._patterns.items():
