@@ -19,7 +19,6 @@ To run this example on your own system with MOOSE installed:
     - Ensure that you have a MOOSE app installed with the Heat Transfer module enabled
     - Move into MOOSE examples directory: cd connectors-moose/examples
     - Create a simvue.toml file, copying in your information from the Simvue server: vi simvue.toml
-    - Update the 'MOOSE_APP_PATH' at the top of the script to point to your MOOSE app
     - Install Poetry: pip install poetry
     - Install required modules: poetry install
     - Run the example script: poetry run python load_example.py
@@ -30,7 +29,6 @@ For a more in depth example, see: https://docs.simvue.io/examples/moose/
 
 import pathlib
 import uuid
-import shutil
 from simvue_moose.connector import MooseRun
 
 # Initialise the MooseRun class as a context manager

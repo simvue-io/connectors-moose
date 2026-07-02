@@ -1,12 +1,5 @@
 from simvue_moose.connector import MooseRun
 import pathlib
-import shutil
-from unittest.mock import patch
-import tempfile
-import time
-import threading
-import uuid
-import simvue
 import pytest
 
 WORKDIR = pathlib.Path(__file__).parent.joinpath("example_data")
