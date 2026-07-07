@@ -36,7 +36,7 @@ def run_moose(
             # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
             run.create_metric_threshold_alert(
                 name="avg_temp_above_500",
-                metric="average_temerature",
+                metric="average_temperature",
                 rule="is above",
                 threshold=500.0,
                 frequency=1,
