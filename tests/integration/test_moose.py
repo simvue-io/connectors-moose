@@ -1,82 +1,204 @@
-from examples.moose_example import moose_example
 import pytest
 import subprocess
 import pathlib
 import tempfile
 import simvue
-from simvue.sender import sender
+import uuid
+from simvue_moose.connector import MooseRun
+from simvue.sender import Sender
+
+# Set this variable to wherever your MOOSE app is located:
+MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
+
+
+def run_moose(
+    moose_file_path: pathlib.Path,
+    offline,
+    parallel,
+    load,
+    moose_app_path=None,
+) -> None:
+
+    # Create a temp dir to contain results, and replace path in file
+    with tempfile.TemporaryDirectory() as tempd:
+        temp_input_file = pathlib.Path(tempd).joinpath(moose_file_path.name)
+        input_file_data = moose_file_path.read_text()
+        if load:
+            patched_file_data = input_file_data.replace(
+                "$OUTPUT_PATH",
+                str(
+                    pathlib.Path(__file__).parent.joinpath(
+                        "example_data", "results", "simvue_thermal"
+                    )
+                ),
+            )
+        else:
+            patched_file_data = input_file_data.replace(
+                "$OUTPUT_PATH",
+                str(pathlib.Path(tempd).joinpath("results", "simvue_thermal")),
+            )
+        temp_input_file.write_text(patched_file_data)
+
+        # Initialise the MooseRun class as a context manager
+        with MooseRun(mode="offline" if offline else "online") as run:
+            # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
+            run.init(
+                name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
+                description="An example of using the MooseRun Connector to track a MOOSE simulation.",
+                folder="/test-moose",
+                tags=["moose", "thermal", "diffusion"],
+                retention_period="1 hour",
+            )
+
+            # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
+            run.create_metric_threshold_alert(
+                name="avg_temp_above_500",
+                metric="average_temperature",
+                rule="is above",
+                threshold=500.0,
+                frequency=1,
+                window=1,
+            )
+
+            if load:
+                run.load(
+                    moose_file_path=temp_input_file,
+                    # You can optionally choose to track VectorPostProcessor outputs too:
+                    track_vector_postprocessors=True,
+                    track_vector_positions=False,
+                )
+            else:
+                # Then call the .launch() method to start your MOOSE simulation
+                run.launch(
+                    moose_application_path=moose_app_path,
+                    moose_file_path=temp_input_file,
+                    # You can optionally choose to track VectorPostProcessor outputs too:
+                    track_vector_postprocessors=True,
+                    track_vector_positions=False,
+                    # And you can choose whether to run it in parallel
+                    run_in_parallel=parallel,
+                    num_processors=2,
+                    mpiexec_env_vars={"allow-run-as-root": True},
+                )
+
+            # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
+            run.log_event("Deleting local copies of results...")
+
+            run_id = run.id
+
+        if offline:
+            sender = Sender(throw_exceptions=True)
+            sender.upload()
+            run_id = sender._id_mapping.get(run_id)
+
+        return run_id
+
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
 @pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-def test_moose_connector(offline, parallel):
+@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
+def test_moose_connector(offline, parallel, load, offline_cache_setup):
     try:
-        subprocess.run("/opt/moose/bin/moose-opt")
+        subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
-        pytest.skip("You are attempting to run MOOSE Integration Tests without having MOOSE installed.")
-            
-    run_id = moose_example("/opt/moose/bin/moose-opt", offline=offline, parallel=parallel)
+        pytest.skip(
+            "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
+        )
+    if load:
+        if parallel:
+            pytest.skip("Parallel has no effect when loading from historic runs")
 
-    if offline:
-        _id_mapping = sender()
-        run_id = _id_mapping.get(run_id)
-    
+    run_id = run_moose(
+        moose_file_path=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "thermal_bar.i"
+        ),
+        offline=offline,
+        parallel=parallel,
+        load=load,
+        moose_app_path=MOOSE_APP_PATH,
+    )
+
     client = simvue.Client()
     run_data = client.get_run(run_id)
     events = [event["message"] for event in client.get_events(run_id)]
-    
+
     # Check run description and tags from init have been added
-    assert run_data.description == "An example of using the MooseRun Connector to track a MOOSE simulation."
-    assert run_data.tags == ['moose', 'thermal', 'diffusion']
-    
+    assert (
+        run_data.description
+        == "An example of using the MooseRun Connector to track a MOOSE simulation."
+    )
+    assert run_data.tags == ["moose", "thermal", "diffusion"]
+
     # Check alert has been added
-    assert "avg_temp_above_500" in [alert["name"] for alert in run_data.get_alert_details()]
-    
+    assert "avg_temp_above_500" in [
+        alert["name"] for alert in run_data.get_alert_details()
+    ]
+
     # Check metadata from MOOSE log header has been uploaded
     assert run_data.metadata["moose"]["executioner"] == "Transient"
-    
+
     if parallel:
-        assert run_data.metadata["moose"]["num_processors"] == '2'
+        assert run_data.metadata["moose"]["num_processors"] == "2"
     else:
-        assert run_data.metadata["moose"]["num_processors"] == '1'
-    
+        assert run_data.metadata["moose"]["num_processors"] == "1"
+
     # Check metadata from MOOSE input file has been uploaded
-    assert run_data.metadata["thermal_bar"]["Postprocessors"]["average_temperature"]["type"] == "ElementAverageValue"
+    assert (
+        run_data.metadata["thermal_bar"]["Postprocessors"]["average_temperature"][
+            "type"
+        ]
+        == "ElementAverageValue"
+    )
     assert run_data.metadata["thermal_bar"]["BCs"]["hot"]["value"] == 1000
-    
+
     # Check events uploaded from log
     assert "Time Step 1, time = 2, dt = 2" in events
     assert "Time Step 15, time = 30, dt = 2" in events
-    
+
     # Check metrics uploaded from PostProcessor CSV
     metrics = dict(run_data.metrics)
     assert metrics["average_temperature"]["max"] > 498
-    
+
     # Check time and step data is correct
-    sample_metric = client.get_metric_values(metric_names=["average_temperature"], xaxis="time", output_format="dataframe", run_ids=[run_id])
+    sample_metric = client.get_metric_values(
+        metric_names=["average_temperature"],
+        xaxis="time",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
     assert list(sample_metric.index.levels[0]) == list(range(0, 32, 2))
-    sample_metric = client.get_metric_values(metric_names=["average_temperature"], xaxis="step", output_format="dataframe", run_ids=[run_id])
+    sample_metric = client.get_metric_values(
+        metric_names=["average_temperature"],
+        xaxis="step",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
     assert list(sample_metric.index.levels[0]) == list(range(0, 16, 1))
-    
+
     # Check metrics uploaded from VectorPostProcessor CSV
     assert metrics["temperature_along_bar.T.1"]["max"] > 498
-    
+
     # Check time and step data is correct - starts from first step, since file PostProcessor file 0000 is blank
-    sample_metric = client.get_metric_values(metric_names=["temperature_along_bar.T.0"], xaxis="time", output_format="dataframe", run_ids=[run_id])
+    sample_metric = client.get_metric_values(
+        metric_names=["temperature_along_bar.T.0"],
+        xaxis="time",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
     assert list(sample_metric.index.levels[0]) == list(range(2, 32, 2))
-    sample_metric = client.get_metric_values(metric_names=["temperature_along_bar.T.2"], xaxis="step", output_format="dataframe", run_ids=[run_id])
+    sample_metric = client.get_metric_values(
+        metric_names=["temperature_along_bar.T.2"],
+        xaxis="step",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
     assert list(sample_metric.index.levels[0]) == list(range(1, 16, 1))
-    
-    temp_dir = tempfile.TemporaryDirectory()
-    
-    # Check input file uploaded as input
-    client.get_artifacts_as_files(run_id, "input", temp_dir.name)
-    assert pathlib.Path(temp_dir.name).joinpath("thermal_bar.i").exists()
-    
-    # Check results uploaded as output
-    client.get_artifacts_as_files(run_id, "output", temp_dir.name)
-    assert pathlib.Path(temp_dir.name).joinpath("simvue_thermal.e").exists()
-    
-     
-    
-    
-    
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input file uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("thermal_bar.i").exists()
+
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()

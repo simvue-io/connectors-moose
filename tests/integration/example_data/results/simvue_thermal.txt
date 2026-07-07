@@ -1,0 +1,1858 @@
+Framework Information:
+MOOSE Version:           git commit e1602b1e72 on 2026-05-29
+LibMesh Version:         aeab0b93c188afdac422e968cacb12bc18806bc1
+PETSc Version:           3.25.1
+SLEPc Version:           3.25.0
+Libtorch Version:        2.11.0
+MFEM Version:            4.9.1
+Current Time:            Thu Jun 11 14:33:47 2026
+Executable Timestamp:    Fri May 29 09:44:39 2026
+
+Input File(s):
+  /connectors-moose/examples/thermal_bar.i
+
+Command Line Argument(s):
+  --color off
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END 
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh: 
+  Parallel Type:           replicated
+  Mesh Dimension:          3
+  Spatial Dimension:       3
+  Nodes:                   9261
+  Elems:                   8000
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                9261
+  Num Local DOFs:          9261
+  Variables:               "T" 
+  Finite Element Types:    "LAGRANGE" 
+  Approximation Orders:    "FIRST" 
+
+Execution Information:
+  Executioner:             Transient
+  TimeStepper:             ConstantDT
+  TimeIntegrator(s):       ImplicitEuler
+  Solver Mode:             NEWTON 
+  MOOSE Preconditioner:    SMP (auto) 
+
+
+Time Step 0, time = 0
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
++----------------+---------------------+
+
+
+Time Step 1, time = 2, dt = 2
+ 0 Nonlinear |R| = 1.580313e+02
+      0 Linear |R| = 1.580313e+02
+      1 Linear |R| = 1.075251e+02
+      2 Linear |R| = 6.458398e+01
+      3 Linear |R| = 4.623049e+01
+      4 Linear |R| = 3.606532e+01
+      5 Linear |R| = 2.766671e+01
+      6 Linear |R| = 2.194173e+01
+      7 Linear |R| = 1.864245e+01
+      8 Linear |R| = 1.528889e+01
+      9 Linear |R| = 1.298650e+01
+     10 Linear |R| = 1.097409e+01
+     11 Linear |R| = 9.477857e+00
+     12 Linear |R| = 8.126142e+00
+     13 Linear |R| = 7.031000e+00
+     14 Linear |R| = 6.096189e+00
+     15 Linear |R| = 5.319837e+00
+     16 Linear |R| = 4.641789e+00
+     17 Linear |R| = 4.054427e+00
+     18 Linear |R| = 3.538149e+00
+     19 Linear |R| = 3.116804e+00
+     20 Linear |R| = 2.722707e+00
+     21 Linear |R| = 2.393464e+00
+     22 Linear |R| = 2.104791e+00
+     23 Linear |R| = 1.848653e+00
+     24 Linear |R| = 1.625608e+00
+     25 Linear |R| = 1.435216e+00
+     26 Linear |R| = 1.259319e+00
+     27 Linear |R| = 1.107729e+00
+     28 Linear |R| = 9.796033e-01
+     29 Linear |R| = 8.566633e-01
+     30 Linear |R| = 7.558519e-01
+     31 Linear |R| = 7.091630e-01
+     32 Linear |R| = 6.176864e-01
+     33 Linear |R| = 5.268351e-01
+     34 Linear |R| = 4.763535e-01
+     35 Linear |R| = 4.116256e-01
+     36 Linear |R| = 3.613461e-01
+     37 Linear |R| = 3.228129e-01
+     38 Linear |R| = 2.768340e-01
+     39 Linear |R| = 2.479722e-01
+     40 Linear |R| = 2.155603e-01
+     41 Linear |R| = 1.889453e-01
+     42 Linear |R| = 1.665213e-01
+     43 Linear |R| = 1.454351e-01
+     44 Linear |R| = 1.270226e-01
+     45 Linear |R| = 1.108121e-01
+     46 Linear |R| = 9.629712e-02
+     47 Linear |R| = 8.377094e-02
+     48 Linear |R| = 7.215905e-02
+     49 Linear |R| = 6.235938e-02
+     50 Linear |R| = 5.351588e-02
+     51 Linear |R| = 4.543347e-02
+     52 Linear |R| = 3.817642e-02
+     53 Linear |R| = 3.201045e-02
+     54 Linear |R| = 2.637607e-02
+     55 Linear |R| = 2.170979e-02
+     56 Linear |R| = 1.674301e-02
+     57 Linear |R| = 1.327157e-02
+     58 Linear |R| = 9.476287e-03
+     59 Linear |R| = 6.695355e-03
+     60 Linear |R| = 3.958039e-03
+     61 Linear |R| = 2.863546e-03
+     62 Linear |R| = 1.817641e-03
+     63 Linear |R| = 1.321565e-03
+ 1 Nonlinear |R| = 1.321565e-03
+      0 Linear |R| = 1.321565e-03
+      1 Linear |R| = 1.126182e-03
+      2 Linear |R| = 8.849758e-04
+      3 Linear |R| = 7.050380e-04
+      4 Linear |R| = 5.322539e-04
+      5 Linear |R| = 4.550490e-04
+      6 Linear |R| = 3.859065e-04
+      7 Linear |R| = 3.262355e-04
+      8 Linear |R| = 2.666514e-04
+      9 Linear |R| = 2.396100e-04
+     10 Linear |R| = 2.070793e-04
+     11 Linear |R| = 1.795648e-04
+     12 Linear |R| = 1.535269e-04
+     13 Linear |R| = 1.365444e-04
+     14 Linear |R| = 1.192886e-04
+     15 Linear |R| = 1.033382e-04
+     16 Linear |R| = 9.025391e-05
+     17 Linear |R| = 8.104497e-05
+     18 Linear |R| = 7.025032e-05
+     19 Linear |R| = 6.174455e-05
+     20 Linear |R| = 5.347984e-05
+     21 Linear |R| = 4.745839e-05
+     22 Linear |R| = 4.192798e-05
+     23 Linear |R| = 3.552674e-05
+     24 Linear |R| = 3.171218e-05
+     25 Linear |R| = 2.803295e-05
+     26 Linear |R| = 2.390724e-05
+     27 Linear |R| = 2.155863e-05
+     28 Linear |R| = 1.857336e-05
+     29 Linear |R| = 1.352640e-05
+     30 Linear |R| = 6.900175e-06
+     31 Linear |R| = 4.429394e-06
+     32 Linear |R| = 3.096920e-06
+     33 Linear |R| = 2.293170e-06
+     34 Linear |R| = 2.039594e-06
+     35 Linear |R| = 1.845040e-06
+     36 Linear |R| = 1.617745e-06
+     37 Linear |R| = 1.362666e-06
+     38 Linear |R| = 1.218884e-06
+     39 Linear |R| = 1.081652e-06
+     40 Linear |R| = 9.203792e-07
+     41 Linear |R| = 8.176147e-07
+     42 Linear |R| = 7.308494e-07
+     43 Linear |R| = 6.180645e-07
+     44 Linear |R| = 5.450391e-07
+     45 Linear |R| = 4.883636e-07
+     46 Linear |R| = 4.257870e-07
+     47 Linear |R| = 3.593150e-07
+     48 Linear |R| = 3.229678e-07
+     49 Linear |R| = 2.828225e-07
+     50 Linear |R| = 2.425127e-07
+     51 Linear |R| = 2.062139e-07
+     52 Linear |R| = 1.846853e-07
+     53 Linear |R| = 1.578436e-07
+     54 Linear |R| = 1.275556e-07
+     55 Linear |R| = 1.087354e-07
+     56 Linear |R| = 9.462542e-08
+     57 Linear |R| = 7.619577e-08
+     58 Linear |R| = 5.865410e-08
+     59 Linear |R| = 4.679639e-08
+     60 Linear |R| = 3.753368e-08
+     61 Linear |R| = 3.306249e-08
+     62 Linear |R| = 2.552202e-08
+     63 Linear |R| = 2.009224e-08
+     64 Linear |R| = 1.574688e-08
+     65 Linear |R| = 1.345015e-08
+     66 Linear |R| = 1.159367e-08
+ 2 Nonlinear |R| = 1.159366e-08
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
++----------------+---------------------+
+
+
+Time Step 2, time = 4, dt = 2
+ 0 Nonlinear |R| = 1.004430e+01
+      0 Linear |R| = 1.004430e+01
+      1 Linear |R| = 9.802736e+00
+      2 Linear |R| = 8.052707e+00
+      3 Linear |R| = 7.433931e+00
+      4 Linear |R| = 6.336245e+00
+      5 Linear |R| = 5.625498e+00
+      6 Linear |R| = 4.929566e+00
+      7 Linear |R| = 4.380670e+00
+      8 Linear |R| = 3.881861e+00
+      9 Linear |R| = 3.377481e+00
+     10 Linear |R| = 2.992404e+00
+     11 Linear |R| = 2.617580e+00
+     12 Linear |R| = 2.311621e+00
+     13 Linear |R| = 2.018005e+00
+     14 Linear |R| = 1.768402e+00
+     15 Linear |R| = 1.556103e+00
+     16 Linear |R| = 1.350010e+00
+     17 Linear |R| = 1.170501e+00
+     18 Linear |R| = 1.020719e+00
+     19 Linear |R| = 8.789636e-01
+     20 Linear |R| = 7.517440e-01
+     21 Linear |R| = 6.481605e-01
+     22 Linear |R| = 5.454635e-01
+     23 Linear |R| = 4.633548e-01
+     24 Linear |R| = 3.849841e-01
+     25 Linear |R| = 3.184827e-01
+     26 Linear |R| = 2.530802e-01
+     27 Linear |R| = 2.020657e-01
+     28 Linear |R| = 1.529329e-01
+     29 Linear |R| = 1.108601e-01
+     30 Linear |R| = 7.504752e-02
+     31 Linear |R| = 5.686653e-02
+     32 Linear |R| = 3.952596e-02
+     33 Linear |R| = 2.930240e-02
+     34 Linear |R| = 2.358746e-02
+     35 Linear |R| = 1.847246e-02
+     36 Linear |R| = 1.533163e-02
+     37 Linear |R| = 1.268783e-02
+     38 Linear |R| = 1.066467e-02
+     39 Linear |R| = 9.096329e-03
+     40 Linear |R| = 7.695001e-03
+     41 Linear |R| = 6.705434e-03
+     42 Linear |R| = 5.696865e-03
+     43 Linear |R| = 4.998873e-03
+     44 Linear |R| = 4.318895e-03
+     45 Linear |R| = 3.738380e-03
+     46 Linear |R| = 3.286533e-03
+     47 Linear |R| = 2.862632e-03
+     48 Linear |R| = 2.505460e-03
+     49 Linear |R| = 2.200683e-03
+     50 Linear |R| = 1.929793e-03
+     51 Linear |R| = 1.707318e-03
+     52 Linear |R| = 1.476041e-03
+     53 Linear |R| = 1.320910e-03
+     54 Linear |R| = 1.147263e-03
+     55 Linear |R| = 1.023922e-03
+     56 Linear |R| = 8.921332e-04
+     57 Linear |R| = 7.882728e-04
+     58 Linear |R| = 6.918061e-04
+     59 Linear |R| = 6.094284e-04
+     60 Linear |R| = 5.290472e-04
+     61 Linear |R| = 5.024007e-04
+     62 Linear |R| = 4.279898e-04
+     63 Linear |R| = 3.806914e-04
+     64 Linear |R| = 3.334361e-04
+     65 Linear |R| = 2.953588e-04
+     66 Linear |R| = 2.587166e-04
+     67 Linear |R| = 2.296475e-04
+     68 Linear |R| = 2.003553e-04
+     69 Linear |R| = 1.775049e-04
+     70 Linear |R| = 1.555546e-04
+     71 Linear |R| = 1.369402e-04
+     72 Linear |R| = 1.200154e-04
+     73 Linear |R| = 1.050955e-04
+     74 Linear |R| = 9.243372e-05
+ 1 Nonlinear |R| = 9.243372e-05
+      0 Linear |R| = 9.243372e-05
+      1 Linear |R| = 8.579008e-05
+      2 Linear |R| = 7.938299e-05
+      3 Linear |R| = 7.208689e-05
+      4 Linear |R| = 6.606069e-05
+      5 Linear |R| = 5.920112e-05
+      6 Linear |R| = 5.270800e-05
+      7 Linear |R| = 4.734725e-05
+      8 Linear |R| = 4.128877e-05
+      9 Linear |R| = 3.633814e-05
+     10 Linear |R| = 3.147945e-05
+     11 Linear |R| = 2.739802e-05
+     12 Linear |R| = 2.322241e-05
+     13 Linear |R| = 2.024017e-05
+     14 Linear |R| = 1.698553e-05
+     15 Linear |R| = 1.233577e-05
+     16 Linear |R| = 9.158496e-06
+     17 Linear |R| = 6.587497e-06
+     18 Linear |R| = 5.393008e-06
+     19 Linear |R| = 4.875976e-06
+     20 Linear |R| = 4.447465e-06
+     21 Linear |R| = 3.800271e-06
+     22 Linear |R| = 2.993110e-06
+     23 Linear |R| = 2.374070e-06
+     24 Linear |R| = 1.736271e-06
+     25 Linear |R| = 1.447512e-06
+     26 Linear |R| = 1.181514e-06
+     27 Linear |R| = 9.188300e-07
+     28 Linear |R| = 5.637718e-07
+     29 Linear |R| = 3.340981e-07
+     30 Linear |R| = 2.345078e-07
+     31 Linear |R| = 1.896059e-07
+     32 Linear |R| = 1.283255e-07
+     33 Linear |R| = 6.807269e-08
+     34 Linear |R| = 4.810687e-08
+     35 Linear |R| = 3.939200e-08
+     36 Linear |R| = 3.379882e-08
+     37 Linear |R| = 2.471000e-08
+     38 Linear |R| = 1.911870e-08
+     39 Linear |R| = 1.535174e-08
+     40 Linear |R| = 1.270722e-08
+     41 Linear |R| = 1.146237e-08
+     42 Linear |R| = 1.049200e-08
+     43 Linear |R| = 8.770615e-09
+     44 Linear |R| = 6.420634e-09
+     45 Linear |R| = 4.819384e-09
+     46 Linear |R| = 3.301633e-09
+     47 Linear |R| = 2.777748e-09
+     48 Linear |R| = 2.367726e-09
+     49 Linear |R| = 2.034551e-09
+     50 Linear |R| = 1.727514e-09
+     51 Linear |R| = 1.489612e-09
+     52 Linear |R| = 1.290871e-09
+     53 Linear |R| = 1.128031e-09
+     54 Linear |R| = 9.870076e-10
+     55 Linear |R| = 8.917171e-10
+ 2 Nonlinear |R| = 8.917249e-10
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
++----------------+---------------------+
+
+
+Time Step 3, time = 6, dt = 2
+ 0 Nonlinear |R| = 3.776850e+00
+      0 Linear |R| = 3.776850e+00
+      1 Linear |R| = 3.763774e+00
+      2 Linear |R| = 3.454411e+00
+      3 Linear |R| = 2.950330e+00
+      4 Linear |R| = 2.185967e+00
+      5 Linear |R| = 1.836346e+00
+      6 Linear |R| = 1.686075e+00
+      7 Linear |R| = 1.454566e+00
+      8 Linear |R| = 1.201993e+00
+      9 Linear |R| = 1.064701e+00
+     10 Linear |R| = 9.119876e-01
+     11 Linear |R| = 7.834848e-01
+     12 Linear |R| = 6.552973e-01
+     13 Linear |R| = 5.630245e-01
+     14 Linear |R| = 4.828353e-01
+     15 Linear |R| = 4.030665e-01
+     16 Linear |R| = 3.288725e-01
+     17 Linear |R| = 2.820475e-01
+     18 Linear |R| = 2.180958e-01
+     19 Linear |R| = 1.778393e-01
+     20 Linear |R| = 1.470728e-01
+     21 Linear |R| = 1.159073e-01
+     22 Linear |R| = 8.608173e-02
+     23 Linear |R| = 6.908496e-02
+     24 Linear |R| = 5.386852e-02
+     25 Linear |R| = 3.514584e-02
+     26 Linear |R| = 2.726675e-02
+     27 Linear |R| = 1.866026e-02
+     28 Linear |R| = 1.171471e-02
+     29 Linear |R| = 7.894425e-03
+     30 Linear |R| = 4.611990e-03
+     31 Linear |R| = 3.194976e-03
+     32 Linear |R| = 2.108120e-03
+     33 Linear |R| = 1.313286e-03
+     34 Linear |R| = 8.738870e-04
+     35 Linear |R| = 6.477575e-04
+     36 Linear |R| = 4.612332e-04
+     37 Linear |R| = 3.429464e-04
+     38 Linear |R| = 2.674719e-04
+     39 Linear |R| = 2.117890e-04
+     40 Linear |R| = 1.619269e-04
+     41 Linear |R| = 1.323521e-04
+     42 Linear |R| = 1.090927e-04
+     43 Linear |R| = 8.971667e-05
+     44 Linear |R| = 7.375757e-05
+     45 Linear |R| = 6.389316e-05
+     46 Linear |R| = 5.458741e-05
+     47 Linear |R| = 4.612514e-05
+     48 Linear |R| = 4.066972e-05
+     49 Linear |R| = 3.516123e-05
+ 1 Nonlinear |R| = 3.516122e-05
+      0 Linear |R| = 3.516122e-05
+      1 Linear |R| = 3.300690e-05
+      2 Linear |R| = 3.034165e-05
+      3 Linear |R| = 2.782729e-05
+      4 Linear |R| = 2.519746e-05
+      5 Linear |R| = 2.262532e-05
+      6 Linear |R| = 2.006013e-05
+      7 Linear |R| = 1.747933e-05
+      8 Linear |R| = 1.533270e-05
+      9 Linear |R| = 1.247607e-05
+     10 Linear |R| = 1.039122e-05
+     11 Linear |R| = 8.940587e-06
+     12 Linear |R| = 8.257661e-06
+     13 Linear |R| = 7.157084e-06
+     14 Linear |R| = 6.207529e-06
+     15 Linear |R| = 5.447218e-06
+     16 Linear |R| = 4.639639e-06
+     17 Linear |R| = 3.992611e-06
+     18 Linear |R| = 3.331563e-06
+     19 Linear |R| = 2.870363e-06
+     20 Linear |R| = 2.270695e-06
+     21 Linear |R| = 1.909078e-06
+     22 Linear |R| = 1.577284e-06
+     23 Linear |R| = 1.253847e-06
+     24 Linear |R| = 8.598391e-07
+     25 Linear |R| = 7.016467e-07
+     26 Linear |R| = 6.122287e-07
+     27 Linear |R| = 4.453082e-07
+     28 Linear |R| = 3.149891e-07
+     29 Linear |R| = 2.294068e-07
+     30 Linear |R| = 1.602546e-07
+     31 Linear |R| = 1.202701e-07
+     32 Linear |R| = 8.641066e-08
+     33 Linear |R| = 6.077581e-08
+     34 Linear |R| = 4.491446e-08
+     35 Linear |R| = 3.834911e-08
+     36 Linear |R| = 3.181316e-08
+     37 Linear |R| = 2.290043e-08
+     38 Linear |R| = 1.766610e-08
+     39 Linear |R| = 1.424529e-08
+     40 Linear |R| = 1.226154e-08
+     41 Linear |R| = 1.011663e-08
+     42 Linear |R| = 8.376168e-09
+     43 Linear |R| = 7.180950e-09
+     44 Linear |R| = 6.210596e-09
+     45 Linear |R| = 5.378141e-09
+     46 Linear |R| = 4.673296e-09
+     47 Linear |R| = 4.050210e-09
+     48 Linear |R| = 3.560926e-09
+     49 Linear |R| = 3.161264e-09
+     50 Linear |R| = 2.856444e-09
+     51 Linear |R| = 2.367455e-09
+     52 Linear |R| = 1.996479e-09
+     53 Linear |R| = 1.710602e-09
+     54 Linear |R| = 1.503336e-09
+     55 Linear |R| = 1.330459e-09
+     56 Linear |R| = 1.190779e-09
+     57 Linear |R| = 1.070331e-09
+     58 Linear |R| = 9.796621e-10
+     59 Linear |R| = 8.848898e-10
+     60 Linear |R| = 8.011268e-10
+     61 Linear |R| = 7.434071e-10
+     62 Linear |R| = 6.808276e-10
+     63 Linear |R| = 6.249148e-10
+     64 Linear |R| = 5.607358e-10
+     65 Linear |R| = 5.006876e-10
+     66 Linear |R| = 4.426394e-10
+     67 Linear |R| = 3.902016e-10
+     68 Linear |R| = 3.444394e-10
+ 2 Nonlinear |R| = 3.444513e-10
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
++----------------+---------------------+
+
+
+Time Step 4, time = 8, dt = 2
+ 0 Nonlinear |R| = 2.231968e+00
+      0 Linear |R| = 2.231968e+00
+      1 Linear |R| = 2.225531e+00
+      2 Linear |R| = 2.089173e+00
+      3 Linear |R| = 1.797059e+00
+      4 Linear |R| = 1.106523e+00
+      5 Linear |R| = 6.340592e-01
+      6 Linear |R| = 5.351946e-01
+      7 Linear |R| = 4.936489e-01
+      8 Linear |R| = 4.311855e-01
+      9 Linear |R| = 3.737482e-01
+     10 Linear |R| = 2.997849e-01
+     11 Linear |R| = 2.592527e-01
+     12 Linear |R| = 2.034620e-01
+     13 Linear |R| = 1.559470e-01
+     14 Linear |R| = 1.251686e-01
+     15 Linear |R| = 1.058078e-01
+     16 Linear |R| = 8.428899e-02
+     17 Linear |R| = 7.318786e-02
+     18 Linear |R| = 5.545815e-02
+     19 Linear |R| = 3.894681e-02
+     20 Linear |R| = 2.587562e-02
+     21 Linear |R| = 2.181764e-02
+     22 Linear |R| = 1.792137e-02
+     23 Linear |R| = 1.136813e-02
+     24 Linear |R| = 7.058829e-03
+     25 Linear |R| = 5.746199e-03
+     26 Linear |R| = 3.594135e-03
+     27 Linear |R| = 2.212141e-03
+     28 Linear |R| = 1.589543e-03
+     29 Linear |R| = 1.007129e-03
+     30 Linear |R| = 6.938751e-04
+     31 Linear |R| = 5.558588e-04
+     32 Linear |R| = 3.722501e-04
+     33 Linear |R| = 2.646912e-04
+     34 Linear |R| = 1.539042e-04
+     35 Linear |R| = 1.010345e-04
+     36 Linear |R| = 7.580250e-05
+     37 Linear |R| = 5.110328e-05
+     38 Linear |R| = 3.662924e-05
+     39 Linear |R| = 2.764488e-05
+     40 Linear |R| = 2.188851e-05
+ 1 Nonlinear |R| = 2.188851e-05
+      0 Linear |R| = 2.188851e-05
+      1 Linear |R| = 1.944762e-05
+      2 Linear |R| = 1.605089e-05
+      3 Linear |R| = 1.247299e-05
+      4 Linear |R| = 9.416551e-06
+      5 Linear |R| = 7.464777e-06
+      6 Linear |R| = 6.075322e-06
+      7 Linear |R| = 4.766117e-06
+      8 Linear |R| = 3.861303e-06
+      9 Linear |R| = 3.332872e-06
+     10 Linear |R| = 2.845956e-06
+     11 Linear |R| = 2.327977e-06
+     12 Linear |R| = 2.030339e-06
+     13 Linear |R| = 1.850782e-06
+     14 Linear |R| = 1.698117e-06
+     15 Linear |R| = 1.489775e-06
+     16 Linear |R| = 1.346575e-06
+     17 Linear |R| = 1.162247e-06
+     18 Linear |R| = 1.027239e-06
+     19 Linear |R| = 9.239400e-07
+     20 Linear |R| = 6.982048e-07
+     21 Linear |R| = 5.704654e-07
+     22 Linear |R| = 5.031423e-07
+     23 Linear |R| = 4.502062e-07
+     24 Linear |R| = 4.035265e-07
+     25 Linear |R| = 3.648846e-07
+     26 Linear |R| = 3.304445e-07
+     27 Linear |R| = 2.860978e-07
+     28 Linear |R| = 2.403499e-07
+     29 Linear |R| = 1.645350e-07
+     30 Linear |R| = 1.039867e-07
+     31 Linear |R| = 8.167580e-08
+     32 Linear |R| = 5.561017e-08
+     33 Linear |R| = 4.250383e-08
+     34 Linear |R| = 3.571823e-08
+     35 Linear |R| = 3.151602e-08
+     36 Linear |R| = 2.754766e-08
+     37 Linear |R| = 2.511851e-08
+     38 Linear |R| = 2.221291e-08
+     39 Linear |R| = 2.007016e-08
+     40 Linear |R| = 1.709827e-08
+     41 Linear |R| = 1.429420e-08
+     42 Linear |R| = 1.226337e-08
+     43 Linear |R| = 1.068690e-08
+     44 Linear |R| = 9.168697e-09
+     45 Linear |R| = 8.210766e-09
+     46 Linear |R| = 7.152997e-09
+     47 Linear |R| = 6.270618e-09
+     48 Linear |R| = 5.682023e-09
+     49 Linear |R| = 5.061044e-09
+     50 Linear |R| = 4.485888e-09
+     51 Linear |R| = 3.890990e-09
+     52 Linear |R| = 3.287737e-09
+     53 Linear |R| = 2.707308e-09
+     54 Linear |R| = 2.301240e-09
+     55 Linear |R| = 1.862160e-09
+     56 Linear |R| = 1.523333e-09
+     57 Linear |R| = 1.159307e-09
+     58 Linear |R| = 9.012347e-10
+     59 Linear |R| = 7.168341e-10
+     60 Linear |R| = 5.976006e-10
+     61 Linear |R| = 5.378409e-10
+     62 Linear |R| = 4.513968e-10
+     63 Linear |R| = 3.531250e-10
+     64 Linear |R| = 2.712059e-10
+     65 Linear |R| = 2.087268e-10
+ 2 Nonlinear |R| = 2.087452e-10
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
++----------------+---------------------+
+
+
+Time Step 5, time = 10, dt = 2
+ 0 Nonlinear |R| = 1.420954e+00
+      0 Linear |R| = 1.420954e+00
+      1 Linear |R| = 1.416986e+00
+      2 Linear |R| = 1.335510e+00
+      3 Linear |R| = 1.156109e+00
+      4 Linear |R| = 6.854356e-01
+      5 Linear |R| = 2.972968e-01
+      6 Linear |R| = 1.996483e-01
+      7 Linear |R| = 1.702095e-01
+      8 Linear |R| = 1.477808e-01
+      9 Linear |R| = 1.320383e-01
+     10 Linear |R| = 1.142483e-01
+     11 Linear |R| = 1.033251e-01
+     12 Linear |R| = 8.623735e-02
+     13 Linear |R| = 6.445865e-02
+     14 Linear |R| = 4.442912e-02
+     15 Linear |R| = 3.106328e-02
+     16 Linear |R| = 1.994742e-02
+     17 Linear |R| = 1.631914e-02
+     18 Linear |R| = 1.415540e-02
+     19 Linear |R| = 1.214706e-02
+     20 Linear |R| = 7.449763e-03
+     21 Linear |R| = 4.692931e-03
+     22 Linear |R| = 3.790607e-03
+     23 Linear |R| = 2.804645e-03
+     24 Linear |R| = 1.402528e-03
+     25 Linear |R| = 1.117962e-03
+     26 Linear |R| = 9.204926e-04
+     27 Linear |R| = 6.086786e-04
+     28 Linear |R| = 3.825359e-04
+     29 Linear |R| = 2.287161e-04
+     30 Linear |R| = 1.393705e-04
+     31 Linear |R| = 1.077885e-04
+     32 Linear |R| = 7.436171e-05
+     33 Linear |R| = 5.145543e-05
+     34 Linear |R| = 3.355328e-05
+     35 Linear |R| = 2.359555e-05
+     36 Linear |R| = 1.817370e-05
+     37 Linear |R| = 1.071761e-05
+ 1 Nonlinear |R| = 1.071761e-05
+      0 Linear |R| = 1.071761e-05
+      1 Linear |R| = 8.730864e-06
+      2 Linear |R| = 7.097463e-06
+      3 Linear |R| = 5.395996e-06
+      4 Linear |R| = 4.388536e-06
+      5 Linear |R| = 3.304196e-06
+      6 Linear |R| = 2.425093e-06
+      7 Linear |R| = 1.971730e-06
+      8 Linear |R| = 1.599363e-06
+      9 Linear |R| = 1.386427e-06
+     10 Linear |R| = 1.250214e-06
+     11 Linear |R| = 1.131086e-06
+     12 Linear |R| = 9.599568e-07
+     13 Linear |R| = 8.143699e-07
+     14 Linear |R| = 6.634479e-07
+     15 Linear |R| = 6.197653e-07
+     16 Linear |R| = 5.647837e-07
+     17 Linear |R| = 5.024670e-07
+     18 Linear |R| = 4.494971e-07
+     19 Linear |R| = 3.959757e-07
+     20 Linear |R| = 3.042713e-07
+     21 Linear |R| = 2.375608e-07
+     22 Linear |R| = 2.074233e-07
+     23 Linear |R| = 1.789343e-07
+     24 Linear |R| = 1.674038e-07
+     25 Linear |R| = 1.521434e-07
+     26 Linear |R| = 1.371949e-07
+     27 Linear |R| = 1.063521e-07
+     28 Linear |R| = 7.391324e-08
+     29 Linear |R| = 5.767413e-08
+     30 Linear |R| = 4.177305e-08
+     31 Linear |R| = 3.426614e-08
+     32 Linear |R| = 2.634828e-08
+     33 Linear |R| = 1.962836e-08
+     34 Linear |R| = 1.471463e-08
+     35 Linear |R| = 1.203186e-08
+     36 Linear |R| = 1.111688e-08
+     37 Linear |R| = 9.896955e-09
+     38 Linear |R| = 9.111253e-09
+     39 Linear |R| = 8.013391e-09
+     40 Linear |R| = 6.758694e-09
+     41 Linear |R| = 5.456718e-09
+     42 Linear |R| = 4.456776e-09
+     43 Linear |R| = 3.815109e-09
+     44 Linear |R| = 3.182737e-09
+     45 Linear |R| = 2.939264e-09
+     46 Linear |R| = 2.700982e-09
+     47 Linear |R| = 2.463006e-09
+     48 Linear |R| = 2.119260e-09
+     49 Linear |R| = 1.738777e-09
+     50 Linear |R| = 1.532560e-09
+     51 Linear |R| = 1.320752e-09
+     52 Linear |R| = 1.163182e-09
+     53 Linear |R| = 1.022956e-09
+     54 Linear |R| = 8.966524e-10
+     55 Linear |R| = 7.212194e-10
+     56 Linear |R| = 5.486000e-10
+     57 Linear |R| = 3.915247e-10
+     58 Linear |R| = 2.814097e-10
+     59 Linear |R| = 2.277341e-10
+     60 Linear |R| = 1.809467e-10
+     61 Linear |R| = 1.542223e-10
+     62 Linear |R| = 1.297545e-10
+     63 Linear |R| = 9.810945e-11
+ 2 Nonlinear |R| = 9.810681e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
++----------------+---------------------+
+
+
+Time Step 6, time = 12, dt = 2
+ 0 Nonlinear |R| = 9.192142e-01
+      0 Linear |R| = 9.192142e-01
+      1 Linear |R| = 9.166649e-01
+      2 Linear |R| = 8.647086e-01
+      3 Linear |R| = 7.497526e-01
+      4 Linear |R| = 4.411361e-01
+      5 Linear |R| = 1.735126e-01
+      6 Linear |R| = 9.738450e-02
+      7 Linear |R| = 7.281717e-02
+      8 Linear |R| = 5.646129e-02
+      9 Linear |R| = 4.682994e-02
+     10 Linear |R| = 3.936106e-02
+     11 Linear |R| = 3.589315e-02
+     12 Linear |R| = 3.257930e-02
+     13 Linear |R| = 2.806286e-02
+     14 Linear |R| = 2.180165e-02
+     15 Linear |R| = 1.545871e-02
+     16 Linear |R| = 7.849580e-03
+     17 Linear |R| = 4.460891e-03
+     18 Linear |R| = 3.050743e-03
+     19 Linear |R| = 2.678964e-03
+     20 Linear |R| = 2.170259e-03
+     21 Linear |R| = 1.574886e-03
+     22 Linear |R| = 1.322553e-03
+     23 Linear |R| = 1.089205e-03
+     24 Linear |R| = 4.652420e-04
+     25 Linear |R| = 2.275299e-04
+     26 Linear |R| = 1.613753e-04
+     27 Linear |R| = 1.215958e-04
+     28 Linear |R| = 8.931688e-05
+     29 Linear |R| = 6.740275e-05
+     30 Linear |R| = 4.662014e-05
+     31 Linear |R| = 3.812830e-05
+     32 Linear |R| = 2.922337e-05
+     33 Linear |R| = 2.196807e-05
+     34 Linear |R| = 1.591500e-05
+     35 Linear |R| = 1.086289e-05
+     36 Linear |R| = 7.731654e-06
+ 1 Nonlinear |R| = 7.731654e-06
+      0 Linear |R| = 7.731654e-06
+      1 Linear |R| = 5.914027e-06
+      2 Linear |R| = 4.410081e-06
+      3 Linear |R| = 3.295367e-06
+      4 Linear |R| = 2.505847e-06
+      5 Linear |R| = 1.983437e-06
+      6 Linear |R| = 1.620773e-06
+      7 Linear |R| = 8.977582e-07
+      8 Linear |R| = 6.655864e-07
+      9 Linear |R| = 5.669445e-07
+     10 Linear |R| = 4.657985e-07
+     11 Linear |R| = 4.141777e-07
+     12 Linear |R| = 3.465347e-07
+     13 Linear |R| = 2.737734e-07
+     14 Linear |R| = 2.453949e-07
+     15 Linear |R| = 2.050662e-07
+     16 Linear |R| = 1.816729e-07
+     17 Linear |R| = 1.648956e-07
+     18 Linear |R| = 1.554140e-07
+     19 Linear |R| = 1.429785e-07
+     20 Linear |R| = 1.211769e-07
+     21 Linear |R| = 9.855050e-08
+     22 Linear |R| = 7.345867e-08
+     23 Linear |R| = 5.708117e-08
+     24 Linear |R| = 4.893416e-08
+     25 Linear |R| = 4.479455e-08
+     26 Linear |R| = 4.065759e-08
+     27 Linear |R| = 3.556228e-08
+     28 Linear |R| = 3.226785e-08
+     29 Linear |R| = 2.697641e-08
+     30 Linear |R| = 2.010348e-08
+     31 Linear |R| = 1.681200e-08
+     32 Linear |R| = 1.457864e-08
+     33 Linear |R| = 1.282277e-08
+     34 Linear |R| = 1.056544e-08
+     35 Linear |R| = 9.446622e-09
+     36 Linear |R| = 8.562491e-09
+     37 Linear |R| = 7.733278e-09
+     38 Linear |R| = 6.201417e-09
+     39 Linear |R| = 5.150925e-09
+     40 Linear |R| = 4.051150e-09
+     41 Linear |R| = 3.160040e-09
+     42 Linear |R| = 2.728845e-09
+     43 Linear |R| = 2.474672e-09
+     44 Linear |R| = 2.297740e-09
+     45 Linear |R| = 2.079760e-09
+     46 Linear |R| = 1.936522e-09
+     47 Linear |R| = 1.711351e-09
+     48 Linear |R| = 1.427551e-09
+     49 Linear |R| = 1.108802e-09
+     50 Linear |R| = 9.350258e-10
+     51 Linear |R| = 8.097373e-10
+     52 Linear |R| = 6.935754e-10
+     53 Linear |R| = 6.021314e-10
+     54 Linear |R| = 4.704016e-10
+     55 Linear |R| = 3.427735e-10
+     56 Linear |R| = 2.461503e-10
+     57 Linear |R| = 1.710665e-10
+     58 Linear |R| = 1.128367e-10
+     59 Linear |R| = 9.012495e-11
+     60 Linear |R| = 6.998560e-11
+ 2 Nonlinear |R| = 7.000528e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
++----------------+---------------------+
+
+
+Time Step 7, time = 14, dt = 2
+ 0 Nonlinear |R| = 5.968237e-01
+      0 Linear |R| = 5.968237e-01
+      1 Linear |R| = 5.951711e-01
+      2 Linear |R| = 5.615492e-01
+      3 Linear |R| = 4.870834e-01
+      4 Linear |R| = 2.860982e-01
+      5 Linear |R| = 1.096810e-01
+      6 Linear |R| = 5.745831e-02
+      7 Linear |R| = 3.963041e-02
+      8 Linear |R| = 2.737670e-02
+      9 Linear |R| = 1.989150e-02
+     10 Linear |R| = 1.440113e-02
+     11 Linear |R| = 1.213104e-02
+     12 Linear |R| = 1.098750e-02
+     13 Linear |R| = 1.007666e-02
+     14 Linear |R| = 8.903584e-03
+     15 Linear |R| = 7.396256e-03
+     16 Linear |R| = 4.392433e-03
+     17 Linear |R| = 2.299089e-03
+     18 Linear |R| = 1.180497e-03
+     19 Linear |R| = 8.991274e-04
+     20 Linear |R| = 6.709898e-04
+     21 Linear |R| = 4.156319e-04
+     22 Linear |R| = 3.196186e-04
+     23 Linear |R| = 2.935082e-04
+     24 Linear |R| = 2.093113e-04
+     25 Linear |R| = 1.122532e-04
+     26 Linear |R| = 7.163601e-05
+     27 Linear |R| = 4.835901e-05
+     28 Linear |R| = 2.998179e-05
+     29 Linear |R| = 2.103884e-05
+     30 Linear |R| = 1.384001e-05
+     31 Linear |R| = 1.116369e-05
+     32 Linear |R| = 8.292605e-06
+     33 Linear |R| = 5.669368e-06
+ 1 Nonlinear |R| = 5.669368e-06
+      0 Linear |R| = 5.669368e-06
+      1 Linear |R| = 4.610755e-06
+      2 Linear |R| = 3.381990e-06
+      3 Linear |R| = 2.647152e-06
+      4 Linear |R| = 1.616941e-06
+      5 Linear |R| = 1.102419e-06
+      6 Linear |R| = 7.739923e-07
+      7 Linear |R| = 5.987277e-07
+      8 Linear |R| = 5.173753e-07
+      9 Linear |R| = 3.922009e-07
+     10 Linear |R| = 2.067404e-07
+     11 Linear |R| = 1.675353e-07
+     12 Linear |R| = 1.476152e-07
+     13 Linear |R| = 1.249175e-07
+     14 Linear |R| = 9.552640e-08
+     15 Linear |R| = 7.724270e-08
+     16 Linear |R| = 6.373351e-08
+     17 Linear |R| = 5.673028e-08
+     18 Linear |R| = 5.176234e-08
+     19 Linear |R| = 4.955288e-08
+     20 Linear |R| = 4.469066e-08
+     21 Linear |R| = 4.123200e-08
+     22 Linear |R| = 3.519921e-08
+     23 Linear |R| = 2.776777e-08
+     24 Linear |R| = 1.908402e-08
+     25 Linear |R| = 1.282940e-08
+     26 Linear |R| = 8.825366e-09
+     27 Linear |R| = 7.500824e-09
+     28 Linear |R| = 6.779467e-09
+     29 Linear |R| = 6.194935e-09
+     30 Linear |R| = 5.470237e-09
+     31 Linear |R| = 5.102593e-09
+     32 Linear |R| = 4.677980e-09
+     33 Linear |R| = 4.177680e-09
+     34 Linear |R| = 3.634181e-09
+     35 Linear |R| = 2.890775e-09
+     36 Linear |R| = 2.104735e-09
+     37 Linear |R| = 1.446164e-09
+     38 Linear |R| = 1.007121e-09
+     39 Linear |R| = 7.737239e-10
+     40 Linear |R| = 6.852646e-10
+     41 Linear |R| = 6.161262e-10
+     42 Linear |R| = 5.871772e-10
+     43 Linear |R| = 5.565105e-10
+     44 Linear |R| = 5.115554e-10
+     45 Linear |R| = 4.677360e-10
+     46 Linear |R| = 3.811870e-10
+     47 Linear |R| = 3.089845e-10
+     48 Linear |R| = 2.320581e-10
+     49 Linear |R| = 1.924126e-10
+     50 Linear |R| = 1.627510e-10
+     51 Linear |R| = 1.370986e-10
+     52 Linear |R| = 1.084702e-10
+     53 Linear |R| = 7.348884e-11
+     54 Linear |R| = 5.130054e-11
+ 2 Nonlinear |R| = 5.132249e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
++----------------+---------------------+
+
+
+Time Step 8, time = 16, dt = 2
+ 0 Nonlinear |R| = 3.878357e-01
+      0 Linear |R| = 3.878357e-01
+      1 Linear |R| = 3.867622e-01
+      2 Linear |R| = 3.649306e-01
+      3 Linear |R| = 3.165674e-01
+      4 Linear |R| = 1.858674e-01
+      5 Linear |R| = 7.081995e-02
+      6 Linear |R| = 3.641464e-02
+      7 Linear |R| = 2.445588e-02
+      8 Linear |R| = 1.605478e-02
+      9 Linear |R| = 1.069157e-02
+     10 Linear |R| = 6.478074e-03
+     11 Linear |R| = 4.545671e-03
+     12 Linear |R| = 3.746697e-03
+     13 Linear |R| = 3.368811e-03
+     14 Linear |R| = 3.078605e-03
+     15 Linear |R| = 2.820471e-03
+     16 Linear |R| = 2.168983e-03
+     17 Linear |R| = 1.329595e-03
+     18 Linear |R| = 6.877325e-04
+     19 Linear |R| = 5.037369e-04
+     20 Linear |R| = 3.564620e-04
+     21 Linear |R| = 1.767832e-04
+     22 Linear |R| = 9.394473e-05
+     23 Linear |R| = 8.103245e-05
+     24 Linear |R| = 7.014405e-05
+     25 Linear |R| = 5.050948e-05
+     26 Linear |R| = 3.658395e-05
+     27 Linear |R| = 2.670711e-05
+     28 Linear |R| = 1.735755e-05
+     29 Linear |R| = 1.236033e-05
+     30 Linear |R| = 8.112177e-06
+     31 Linear |R| = 6.508057e-06
+     32 Linear |R| = 4.825373e-06
+     33 Linear |R| = 3.308275e-06
+ 1 Nonlinear |R| = 3.308275e-06
+      0 Linear |R| = 3.308275e-06
+      1 Linear |R| = 2.714175e-06
+      2 Linear |R| = 2.021872e-06
+      3 Linear |R| = 1.613554e-06
+      4 Linear |R| = 1.083781e-06
+      5 Linear |R| = 8.181527e-07
+      6 Linear |R| = 6.518338e-07
+      7 Linear |R| = 5.481691e-07
+      8 Linear |R| = 4.734351e-07
+      9 Linear |R| = 3.165299e-07
+     10 Linear |R| = 1.099022e-07
+     11 Linear |R| = 6.486242e-08
+     12 Linear |R| = 5.173698e-08
+     13 Linear |R| = 4.641402e-08
+     14 Linear |R| = 4.239412e-08
+     15 Linear |R| = 3.991192e-08
+     16 Linear |R| = 3.775556e-08
+     17 Linear |R| = 3.508222e-08
+     18 Linear |R| = 2.992106e-08
+     19 Linear |R| = 2.598923e-08
+     20 Linear |R| = 1.775347e-08
+     21 Linear |R| = 1.438352e-08
+     22 Linear |R| = 1.229104e-08
+     23 Linear |R| = 1.103410e-08
+     24 Linear |R| = 1.000110e-08
+     25 Linear |R| = 8.835615e-09
+     26 Linear |R| = 7.231086e-09
+     27 Linear |R| = 6.167122e-09
+     28 Linear |R| = 5.347349e-09
+     29 Linear |R| = 4.554482e-09
+     30 Linear |R| = 3.530037e-09
+     31 Linear |R| = 3.051875e-09
+     32 Linear |R| = 2.632358e-09
+     33 Linear |R| = 2.185585e-09
+     34 Linear |R| = 1.830445e-09
+     35 Linear |R| = 1.501750e-09
+     36 Linear |R| = 1.314305e-09
+     37 Linear |R| = 1.183092e-09
+     38 Linear |R| = 1.061838e-09
+     39 Linear |R| = 9.398764e-10
+     40 Linear |R| = 8.303683e-10
+     41 Linear |R| = 6.330249e-10
+     42 Linear |R| = 5.117890e-10
+     43 Linear |R| = 4.185857e-10
+     44 Linear |R| = 3.457161e-10
+     45 Linear |R| = 3.194916e-10
+     46 Linear |R| = 2.933083e-10
+     47 Linear |R| = 2.778718e-10
+     48 Linear |R| = 2.542792e-10
+     49 Linear |R| = 2.219446e-10
+     50 Linear |R| = 1.770245e-10
+     51 Linear |R| = 1.243126e-10
+     52 Linear |R| = 8.251761e-11
+     53 Linear |R| = 4.749604e-11
+     54 Linear |R| = 2.773252e-11
+ 2 Nonlinear |R| = 2.777169e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
++----------------+---------------------+
+
+
+Time Step 9, time = 18, dt = 2
+ 0 Nonlinear |R| = 2.520792e-01
+      0 Linear |R| = 2.520792e-01
+      1 Linear |R| = 2.513816e-01
+      2 Linear |R| = 2.371944e-01
+      3 Linear |R| = 2.057644e-01
+      4 Linear |R| = 1.207995e-01
+      5 Linear |R| = 4.596227e-02
+      6 Linear |R| = 2.352766e-02
+      7 Linear |R| = 1.569448e-02
+      8 Linear |R| = 1.015471e-02
+      9 Linear |R| = 6.563176e-03
+     10 Linear |R| = 3.628462e-03
+     11 Linear |R| = 2.134071e-03
+     12 Linear |R| = 1.462864e-03
+     13 Linear |R| = 1.175400e-03
+     14 Linear |R| = 1.017768e-03
+     15 Linear |R| = 9.477888e-04
+     16 Linear |R| = 8.480369e-04
+     17 Linear |R| = 6.539121e-04
+     18 Linear |R| = 3.976949e-04
+     19 Linear |R| = 3.008413e-04
+     20 Linear |R| = 2.171957e-04
+     21 Linear |R| = 1.044816e-04
+     22 Linear |R| = 4.428397e-05
+     23 Linear |R| = 3.428063e-05
+     24 Linear |R| = 2.994501e-05
+     25 Linear |R| = 2.324564e-05
+     26 Linear |R| = 1.800308e-05
+     27 Linear |R| = 1.408918e-05
+     28 Linear |R| = 9.851050e-06
+     29 Linear |R| = 7.332311e-06
+     30 Linear |R| = 5.000920e-06
+     31 Linear |R| = 4.086820e-06
+     32 Linear |R| = 3.129388e-06
+     33 Linear |R| = 2.256055e-06
+ 1 Nonlinear |R| = 2.256055e-06
+      0 Linear |R| = 2.256055e-06
+      1 Linear |R| = 1.911920e-06
+      2 Linear |R| = 1.509570e-06
+      3 Linear |R| = 1.261518e-06
+      4 Linear |R| = 9.026897e-07
+      5 Linear |R| = 6.942038e-07
+      6 Linear |R| = 5.438189e-07
+      7 Linear |R| = 4.430992e-07
+      8 Linear |R| = 3.636803e-07
+      9 Linear |R| = 2.182682e-07
+     10 Linear |R| = 7.500425e-08
+     11 Linear |R| = 4.900851e-08
+     12 Linear |R| = 4.147389e-08
+     13 Linear |R| = 3.753152e-08
+     14 Linear |R| = 3.336824e-08
+     15 Linear |R| = 3.013557e-08
+     16 Linear |R| = 2.672776e-08
+     17 Linear |R| = 2.358207e-08
+     18 Linear |R| = 2.034383e-08
+     19 Linear |R| = 1.843561e-08
+     20 Linear |R| = 1.501546e-08
+     21 Linear |R| = 1.315820e-08
+     22 Linear |R| = 1.096497e-08
+     23 Linear |R| = 9.246363e-09
+     24 Linear |R| = 7.881129e-09
+     25 Linear |R| = 6.907945e-09
+     26 Linear |R| = 6.326972e-09
+     27 Linear |R| = 5.970971e-09
+     28 Linear |R| = 5.629311e-09
+     29 Linear |R| = 4.672117e-09
+     30 Linear |R| = 3.303310e-09
+     31 Linear |R| = 2.725103e-09
+     32 Linear |R| = 2.215914e-09
+     33 Linear |R| = 1.879117e-09
+     34 Linear |R| = 1.730098e-09
+     35 Linear |R| = 1.586474e-09
+     36 Linear |R| = 1.473063e-09
+     37 Linear |R| = 1.310395e-09
+     38 Linear |R| = 1.093749e-09
+     39 Linear |R| = 8.945244e-10
+     40 Linear |R| = 7.826376e-10
+     41 Linear |R| = 6.524511e-10
+     42 Linear |R| = 5.757691e-10
+     43 Linear |R| = 5.115185e-10
+     44 Linear |R| = 4.466907e-10
+     45 Linear |R| = 4.009543e-10
+     46 Linear |R| = 3.440008e-10
+     47 Linear |R| = 3.074850e-10
+     48 Linear |R| = 2.742274e-10
+     49 Linear |R| = 2.461627e-10
+     50 Linear |R| = 2.039971e-10
+     51 Linear |R| = 1.528198e-10
+     52 Linear |R| = 9.915973e-11
+     53 Linear |R| = 5.144509e-11
+     54 Linear |R| = 2.946504e-11
+     55 Linear |R| = 2.195608e-11
+ 2 Nonlinear |R| = 2.200697e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
++----------------+---------------------+
+
+
+Time Step 10, time = 20, dt = 2
+ 0 Nonlinear |R| = 1.638502e-01
+      0 Linear |R| = 1.638502e-01
+      1 Linear |R| = 1.633968e-01
+      2 Linear |R| = 1.541756e-01
+      3 Linear |R| = 1.337470e-01
+      4 Linear |R| = 7.851786e-02
+      5 Linear |R| = 2.986528e-02
+      6 Linear |R| = 1.527217e-02
+      7 Linear |R| = 1.017158e-02
+      8 Linear |R| = 6.557985e-03
+      9 Linear |R| = 4.205838e-03
+     10 Linear |R| = 2.260298e-03
+     11 Linear |R| = 1.228058e-03
+     12 Linear |R| = 7.242405e-04
+     13 Linear |R| = 4.871966e-04
+     14 Linear |R| = 3.542813e-04
+     15 Linear |R| = 3.117089e-04
+     16 Linear |R| = 2.901513e-04
+     17 Linear |R| = 2.555271e-04
+     18 Linear |R| = 1.921022e-04
+     19 Linear |R| = 1.578702e-04
+     20 Linear |R| = 1.235074e-04
+     21 Linear |R| = 6.437340e-05
+     22 Linear |R| = 2.613484e-05
+     23 Linear |R| = 1.924775e-05
+     24 Linear |R| = 1.669703e-05
+     25 Linear |R| = 1.307508e-05
+     26 Linear |R| = 1.025830e-05
+     27 Linear |R| = 8.202146e-06
+     28 Linear |R| = 5.906622e-06
+     29 Linear |R| = 4.494606e-06
+     30 Linear |R| = 3.134871e-06
+     31 Linear |R| = 2.590608e-06
+     32 Linear |R| = 2.019279e-06
+     33 Linear |R| = 1.490326e-06
+ 1 Nonlinear |R| = 1.490326e-06
+      0 Linear |R| = 1.490326e-06
+      1 Linear |R| = 1.279921e-06
+      2 Linear |R| = 1.032177e-06
+      3 Linear |R| = 8.752268e-07
+      4 Linear |R| = 6.323456e-07
+      5 Linear |R| = 4.796859e-07
+      6 Linear |R| = 3.664398e-07
+      7 Linear |R| = 2.935475e-07
+      8 Linear |R| = 2.387731e-07
+      9 Linear |R| = 1.440009e-07
+     10 Linear |R| = 5.649562e-08
+     11 Linear |R| = 4.263446e-08
+     12 Linear |R| = 3.833741e-08
+     13 Linear |R| = 3.519426e-08
+     14 Linear |R| = 3.071465e-08
+     15 Linear |R| = 2.662667e-08
+     16 Linear |R| = 2.172664e-08
+     17 Linear |R| = 1.764376e-08
+     18 Linear |R| = 1.442905e-08
+     19 Linear |R| = 1.253914e-08
+     20 Linear |R| = 9.701084e-09
+     21 Linear |R| = 8.247866e-09
+     22 Linear |R| = 6.736462e-09
+     23 Linear |R| = 5.794462e-09
+     24 Linear |R| = 5.175408e-09
+     25 Linear |R| = 4.723761e-09
+     26 Linear |R| = 4.441691e-09
+     27 Linear |R| = 4.208211e-09
+     28 Linear |R| = 3.967659e-09
+     29 Linear |R| = 3.196154e-09
+     30 Linear |R| = 2.197050e-09
+     31 Linear |R| = 1.788366e-09
+     32 Linear |R| = 1.418089e-09
+     33 Linear |R| = 1.178454e-09
+     34 Linear |R| = 1.084967e-09
+     35 Linear |R| = 1.004082e-09
+     36 Linear |R| = 9.512867e-10
+     37 Linear |R| = 8.728973e-10
+     38 Linear |R| = 7.546337e-10
+     39 Linear |R| = 6.300128e-10
+     40 Linear |R| = 5.491095e-10
+     41 Linear |R| = 4.412492e-10
+     42 Linear |R| = 3.642390e-10
+     43 Linear |R| = 3.073649e-10
+     44 Linear |R| = 2.535614e-10
+     45 Linear |R| = 2.146031e-10
+     46 Linear |R| = 1.725908e-10
+     47 Linear |R| = 1.460269e-10
+     48 Linear |R| = 1.287074e-10
+     49 Linear |R| = 1.180751e-10
+     50 Linear |R| = 1.037014e-10
+     51 Linear |R| = 8.465578e-11
+     52 Linear |R| = 5.955147e-11
+     53 Linear |R| = 3.225955e-11
+     54 Linear |R| = 1.824632e-11
+     55 Linear |R| = 1.361956e-11
+ 2 Nonlinear |R| = 1.369773e-11
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
++----------------+---------------------+
+
+
+Time Step 11, time = 22, dt = 2
+ 0 Nonlinear |R| = 1.065030e-01
+      0 Linear |R| = 1.065030e-01
+      1 Linear |R| = 1.062083e-01
+      2 Linear |R| = 1.002145e-01
+      3 Linear |R| = 8.693602e-02
+      4 Linear |R| = 5.103657e-02
+      5 Linear |R| = 1.941113e-02
+      6 Linear |R| = 9.924060e-03
+      7 Linear |R| = 6.607384e-03
+      8 Linear |R| = 4.256532e-03
+      9 Linear |R| = 2.724865e-03
+     10 Linear |R| = 1.453858e-03
+     11 Linear |R| = 7.719662e-04
+     12 Linear |R| = 4.288196e-04
+     13 Linear |R| = 2.564208e-04
+     14 Linear |R| = 1.470790e-04
+     15 Linear |R| = 1.095810e-04
+     16 Linear |R| = 9.910939e-05
+     17 Linear |R| = 8.920768e-05
+     18 Linear |R| = 7.440107e-05
+     19 Linear |R| = 6.576579e-05
+     20 Linear |R| = 5.747770e-05
+     21 Linear |R| = 3.659461e-05
+     22 Linear |R| = 1.592221e-05
+     23 Linear |R| = 1.162149e-05
+     24 Linear |R| = 1.009128e-05
+     25 Linear |R| = 7.962569e-06
+     26 Linear |R| = 6.295250e-06
+     27 Linear |R| = 5.080994e-06
+     28 Linear |R| = 3.706349e-06
+     29 Linear |R| = 2.846757e-06
+     30 Linear |R| = 2.004949e-06
+     31 Linear |R| = 1.664830e-06
+     32 Linear |R| = 1.307916e-06
+     33 Linear |R| = 9.751148e-07
+ 1 Nonlinear |R| = 9.751148e-07
+      0 Linear |R| = 9.751148e-07
+      1 Linear |R| = 8.424919e-07
+      2 Linear |R| = 6.856376e-07
+      3 Linear |R| = 5.855083e-07
+      4 Linear |R| = 4.264257e-07
+      5 Linear |R| = 3.238032e-07
+      6 Linear |R| = 2.472085e-07
+      7 Linear |R| = 1.990701e-07
+      8 Linear |R| = 1.635460e-07
+      9 Linear |R| = 1.036593e-07
+     10 Linear |R| = 5.373665e-08
+     11 Linear |R| = 4.687566e-08
+     12 Linear |R| = 4.357208e-08
+     13 Linear |R| = 3.896747e-08
+     14 Linear |R| = 3.087527e-08
+     15 Linear |R| = 2.418688e-08
+     16 Linear |R| = 1.734199e-08
+     17 Linear |R| = 1.284409e-08
+     18 Linear |R| = 9.988497e-09
+     19 Linear |R| = 8.388743e-09
+     20 Linear |R| = 6.270349e-09
+     21 Linear |R| = 5.246720e-09
+     22 Linear |R| = 4.250800e-09
+     23 Linear |R| = 3.684917e-09
+     24 Linear |R| = 3.339420e-09
+     25 Linear |R| = 3.081206e-09
+     26 Linear |R| = 2.912896e-09
+     27 Linear |R| = 2.759446e-09
+     28 Linear |R| = 2.600968e-09
+     29 Linear |R| = 2.077324e-09
+     30 Linear |R| = 1.421558e-09
+     31 Linear |R| = 1.155120e-09
+     32 Linear |R| = 9.107775e-10
+     33 Linear |R| = 7.520506e-10
+     34 Linear |R| = 6.919600e-10
+     35 Linear |R| = 6.412767e-10
+     36 Linear |R| = 6.108143e-10
+     37 Linear |R| = 5.656393e-10
+     38 Linear |R| = 4.943819e-10
+     39 Linear |R| = 4.150201e-10
+     40 Linear |R| = 3.602628e-10
+     41 Linear |R| = 2.833656e-10
+     42 Linear |R| = 2.233285e-10
+     43 Linear |R| = 1.805668e-10
+     44 Linear |R| = 1.401629e-10
+     45 Linear |R| = 1.100088e-10
+     46 Linear |R| = 7.908589e-11
+     47 Linear |R| = 5.859370e-11
+     48 Linear |R| = 4.745417e-11
+     49 Linear |R| = 4.286037e-11
+     50 Linear |R| = 3.905215e-11
+     51 Linear |R| = 3.484518e-11
+     52 Linear |R| = 2.851013e-11
+     53 Linear |R| = 1.830208e-11
+     54 Linear |R| = 1.107815e-11
+     55 Linear |R| = 8.419647e-12
+ 2 Nonlinear |R| = 8.546152e-12
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
+|   2.200000e+01 |        4.964532e+02 |
++----------------+---------------------+
+
+
+Time Step 12, time = 24, dt = 2
+ 0 Nonlinear |R| = 6.922738e-02
+      0 Linear |R| = 6.922738e-02
+      1 Linear |R| = 6.903579e-02
+      2 Linear |R| = 6.513984e-02
+      3 Linear |R| = 5.650879e-02
+      4 Linear |R| = 3.317393e-02
+      5 Linear |R| = 1.261715e-02
+      6 Linear |R| = 6.450328e-03
+      7 Linear |R| = 4.294316e-03
+      8 Linear |R| = 2.765934e-03
+      9 Linear |R| = 1.769918e-03
+     10 Linear |R| = 9.426862e-04
+     11 Linear |R| = 4.977147e-04
+     12 Linear |R| = 2.719680e-04
+     13 Linear |R| = 1.560959e-04
+     14 Linear |R| = 7.763657e-05
+     15 Linear |R| = 4.667330e-05
+     16 Linear |R| = 3.869207e-05
+     17 Linear |R| = 3.295593e-05
+     18 Linear |R| = 2.670293e-05
+     19 Linear |R| = 2.362999e-05
+     20 Linear |R| = 2.191042e-05
+     21 Linear |R| = 1.719617e-05
+     22 Linear |R| = 8.889022e-06
+     23 Linear |R| = 6.561314e-06
+     24 Linear |R| = 5.761049e-06
+     25 Linear |R| = 4.655262e-06
+     26 Linear |R| = 3.757138e-06
+     27 Linear |R| = 3.087884e-06
+     28 Linear |R| = 2.302192e-06
+     29 Linear |R| = 1.792379e-06
+     30 Linear |R| = 1.278760e-06
+     31 Linear |R| = 1.068308e-06
+     32 Linear |R| = 8.483918e-07
+     33 Linear |R| = 6.425085e-07
+ 1 Nonlinear |R| = 6.425085e-07
+      0 Linear |R| = 6.425085e-07
+      1 Linear |R| = 5.608249e-07
+      2 Linear |R| = 4.637457e-07
+      3 Linear |R| = 4.014719e-07
+      4 Linear |R| = 2.997391e-07
+      5 Linear |R| = 2.327385e-07
+      6 Linear |R| = 1.822226e-07
+      7 Linear |R| = 1.509157e-07
+      8 Linear |R| = 1.272986e-07
+      9 Linear |R| = 8.793519e-08
+     10 Linear |R| = 5.896911e-08
+     11 Linear |R| = 5.458896e-08
+     12 Linear |R| = 4.980371e-08
+     13 Linear |R| = 3.994641e-08
+     14 Linear |R| = 2.630791e-08
+     15 Linear |R| = 1.837385e-08
+     16 Linear |R| = 1.196814e-08
+     17 Linear |R| = 8.425654e-09
+     18 Linear |R| = 6.415920e-09
+     19 Linear |R| = 5.341906e-09
+     20 Linear |R| = 3.959231e-09
+     21 Linear |R| = 3.293748e-09
+     22 Linear |R| = 2.655550e-09
+     23 Linear |R| = 2.304739e-09
+     24 Linear |R| = 2.100225e-09
+     25 Linear |R| = 1.945417e-09
+     26 Linear |R| = 1.839820e-09
+     27 Linear |R| = 1.741115e-09
+     28 Linear |R| = 1.640907e-09
+     29 Linear |R| = 1.310370e-09
+     30 Linear |R| = 9.037122e-10
+     31 Linear |R| = 7.372877e-10
+     32 Linear |R| = 5.823826e-10
+     33 Linear |R| = 4.805368e-10
+     34 Linear |R| = 4.422042e-10
+     35 Linear |R| = 4.097225e-10
+     36 Linear |R| = 3.906962e-10
+     37 Linear |R| = 3.627505e-10
+     38 Linear |R| = 3.177395e-10
+     39 Linear |R| = 2.667928e-10
+     40 Linear |R| = 2.311494e-10
+     41 Linear |R| = 1.805035e-10
+     42 Linear |R| = 1.404935e-10
+     43 Linear |R| = 1.118740e-10
+     44 Linear |R| = 8.472611e-11
+     45 Linear |R| = 6.370840e-11
+     46 Linear |R| = 4.209911e-11
+     47 Linear |R| = 2.668406e-11
+     48 Linear |R| = 1.797705e-11
+     49 Linear |R| = 1.472016e-11
+     50 Linear |R| = 1.296166e-11
+     51 Linear |R| = 1.174934e-11
+     52 Linear |R| = 1.049568e-11
+     53 Linear |R| = 8.142614e-12
+     54 Linear |R| = 5.626727e-12
+ 2 Nonlinear |R| = 5.822870e-12
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
+|   2.200000e+01 |        4.964532e+02 |
+|   2.400000e+01 |        4.976946e+02 |
++----------------+---------------------+
+
+
+Time Step 13, time = 26, dt = 2
+ 0 Nonlinear |R| = 4.499810e-02
+      0 Linear |R| = 4.499810e-02
+      1 Linear |R| = 4.487356e-02
+      2 Linear |R| = 4.234118e-02
+      3 Linear |R| = 3.673097e-02
+      4 Linear |R| = 2.156319e-02
+      5 Linear |R| = 8.201194e-03
+      6 Linear |R| = 4.192717e-03
+      7 Linear |R| = 2.791286e-03
+      8 Linear |R| = 1.797779e-03
+      9 Linear |R| = 1.150299e-03
+     10 Linear |R| = 6.124057e-04
+     11 Linear |R| = 3.229056e-04
+     12 Linear |R| = 1.757477e-04
+     13 Linear |R| = 9.980422e-05
+     14 Linear |R| = 4.734803e-05
+     15 Linear |R| = 2.522539e-05
+     16 Linear |R| = 1.924474e-05
+     17 Linear |R| = 1.507547e-05
+     18 Linear |R| = 1.087001e-05
+     19 Linear |R| = 8.909234e-06
+     20 Linear |R| = 8.280925e-06
+     21 Linear |R| = 7.104148e-06
+     22 Linear |R| = 4.180839e-06
+     23 Linear |R| = 3.053433e-06
+     24 Linear |R| = 2.710337e-06
+     25 Linear |R| = 2.274453e-06
+     26 Linear |R| = 1.909392e-06
+     27 Linear |R| = 1.635638e-06
+     28 Linear |R| = 1.290779e-06
+     29 Linear |R| = 1.046169e-06
+     30 Linear |R| = 7.777282e-07
+     31 Linear |R| = 6.628229e-07
+     32 Linear |R| = 5.437869e-07
+     33 Linear |R| = 4.307499e-07
+ 1 Nonlinear |R| = 4.307499e-07
+      0 Linear |R| = 4.307499e-07
+      1 Linear |R| = 3.859881e-07
+      2 Linear |R| = 3.319658e-07
+      3 Linear |R| = 2.961092e-07
+      4 Linear |R| = 2.310649e-07
+      5 Linear |R| = 1.837867e-07
+      6 Linear |R| = 1.466694e-07
+      7 Linear |R| = 1.241939e-07
+      8 Linear |R| = 1.065526e-07
+      9 Linear |R| = 7.651807e-08
+     10 Linear |R| = 5.497822e-08
+     11 Linear |R| = 5.085351e-08
+     12 Linear |R| = 4.378974e-08
+     13 Linear |R| = 3.058419e-08
+     14 Linear |R| = 1.765186e-08
+     15 Linear |R| = 1.150193e-08
+     16 Linear |R| = 6.990177e-09
+     17 Linear |R| = 4.673357e-09
+     18 Linear |R| = 3.508249e-09
+     19 Linear |R| = 2.963988e-09
+     20 Linear |R| = 2.241516e-09
+     21 Linear |R| = 1.871074e-09
+     22 Linear |R| = 1.500184e-09
+     23 Linear |R| = 1.298665e-09
+     24 Linear |R| = 1.193957e-09
+     25 Linear |R| = 1.114170e-09
+     26 Linear |R| = 1.051829e-09
+     27 Linear |R| = 9.897640e-10
+     28 Linear |R| = 9.283273e-10
+     29 Linear |R| = 7.405376e-10
+     30 Linear |R| = 5.248704e-10
+     31 Linear |R| = 4.363691e-10
+     32 Linear |R| = 3.458947e-10
+     33 Linear |R| = 2.836589e-10
+     34 Linear |R| = 2.592317e-10
+     35 Linear |R| = 2.392014e-10
+     36 Linear |R| = 2.283177e-10
+     37 Linear |R| = 2.133494e-10
+     38 Linear |R| = 1.877443e-10
+     39 Linear |R| = 1.570224e-10
+     40 Linear |R| = 1.361346e-10
+     41 Linear |R| = 1.068863e-10
+     42 Linear |R| = 8.521337e-11
+     43 Linear |R| = 6.759777e-11
+     44 Linear |R| = 5.089677e-11
+     45 Linear |R| = 3.675403e-11
+     46 Linear |R| = 2.306237e-11
+     47 Linear |R| = 1.334186e-11
+     48 Linear |R| = 7.923599e-12
+     49 Linear |R| = 5.706735e-12
+     50 Linear |R| = 4.538372e-12
+     51 Linear |R| = 3.843856e-12
+ 2 Nonlinear |R| = 4.131698e-12
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
+|   2.200000e+01 |        4.964532e+02 |
+|   2.400000e+01 |        4.976946e+02 |
+|   2.600000e+01 |        4.985015e+02 |
++----------------+---------------------+
+
+
+Time Step 14, time = 28, dt = 2
+ 0 Nonlinear |R| = 2.924897e-02
+      0 Linear |R| = 2.924897e-02
+      1 Linear |R| = 2.916802e-02
+      2 Linear |R| = 2.752196e-02
+      3 Linear |R| = 2.387530e-02
+      4 Linear |R| = 1.401617e-02
+      5 Linear |R| = 5.330816e-03
+      6 Linear |R| = 2.725290e-03
+      7 Linear |R| = 1.814356e-03
+      8 Linear |R| = 1.168563e-03
+      9 Linear |R| = 7.476876e-04
+     10 Linear |R| = 3.980177e-04
+     11 Linear |R| = 2.098012e-04
+     12 Linear |R| = 1.140845e-04
+     13 Linear |R| = 6.462668e-05
+     14 Linear |R| = 3.029809e-05
+     15 Linear |R| = 1.554255e-05
+     16 Linear |R| = 1.145928e-05
+     17 Linear |R| = 8.584099e-06
+     18 Linear |R| = 5.646066e-06
+     19 Linear |R| = 4.212448e-06
+     20 Linear |R| = 3.834985e-06
+     21 Linear |R| = 3.319448e-06
+     22 Linear |R| = 1.915829e-06
+     23 Linear |R| = 1.249272e-06
+     24 Linear |R| = 1.072641e-06
+     25 Linear |R| = 8.898335e-07
+     26 Linear |R| = 7.492121e-07
+     27 Linear |R| = 6.620537e-07
+     28 Linear |R| = 5.590783e-07
+     29 Linear |R| = 4.858860e-07
+     30 Linear |R| = 3.970942e-07
+     31 Linear |R| = 3.558168e-07
+     32 Linear |R| = 3.120325e-07
+     33 Linear |R| = 2.650911e-07
+ 1 Nonlinear |R| = 2.650911e-07
+      0 Linear |R| = 2.650911e-07
+      1 Linear |R| = 2.451868e-07
+      2 Linear |R| = 2.201868e-07
+      3 Linear |R| = 2.021789e-07
+      4 Linear |R| = 1.591206e-07
+      5 Linear |R| = 1.159088e-07
+      6 Linear |R| = 8.115251e-08
+      7 Linear |R| = 6.448343e-08
+      8 Linear |R| = 5.603204e-08
+      9 Linear |R| = 4.273524e-08
+     10 Linear |R| = 2.754518e-08
+     11 Linear |R| = 2.431761e-08
+     12 Linear |R| = 2.070342e-08
+     13 Linear |R| = 1.495932e-08
+     14 Linear |R| = 9.170548e-09
+     15 Linear |R| = 5.905343e-09
+     16 Linear |R| = 3.275620e-09
+     17 Linear |R| = 1.839042e-09
+     18 Linear |R| = 1.229852e-09
+     19 Linear |R| = 9.951602e-10
+     20 Linear |R| = 7.959616e-10
+     21 Linear |R| = 7.108318e-10
+     22 Linear |R| = 6.240133e-10
+     23 Linear |R| = 5.520098e-10
+     24 Linear |R| = 5.034311e-10
+     25 Linear |R| = 4.628131e-10
+     26 Linear |R| = 4.309012e-10
+     27 Linear |R| = 4.022606e-10
+     28 Linear |R| = 3.716377e-10
+     29 Linear |R| = 2.983581e-10
+     30 Linear |R| = 1.974449e-10
+     31 Linear |R| = 1.509136e-10
+     32 Linear |R| = 1.198345e-10
+     33 Linear |R| = 9.851888e-11
+     34 Linear |R| = 8.943976e-11
+     35 Linear |R| = 8.133512e-11
+     36 Linear |R| = 7.764109e-11
+     37 Linear |R| = 7.285331e-11
+     38 Linear |R| = 6.434523e-11
+     39 Linear |R| = 5.560386e-11
+     40 Linear |R| = 5.038684e-11
+     41 Linear |R| = 4.398127e-11
+     42 Linear |R| = 3.781292e-11
+     43 Linear |R| = 2.944259e-11
+     44 Linear |R| = 1.853296e-11
+     45 Linear |R| = 1.215740e-11
+     46 Linear |R| = 7.373642e-12
+     47 Linear |R| = 4.516375e-12
+     48 Linear |R| = 3.006872e-12
+     49 Linear |R| = 2.257370e-12
+ 2 Nonlinear |R| = 2.713965e-12
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+|   0.000000e+00 |        0.000000e+00 |
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
+|   2.200000e+01 |        4.964532e+02 |
+|   2.400000e+01 |        4.976946e+02 |
+|   2.600000e+01 |        4.985015e+02 |
+|   2.800000e+01 |        4.990259e+02 |
++----------------+---------------------+
+
+
+Time Step 15, time = 30, dt = 2
+ 0 Nonlinear |R| = 1.901196e-02
+      0 Linear |R| = 1.901196e-02
+      1 Linear |R| = 1.895934e-02
+      2 Linear |R| = 1.788940e-02
+      3 Linear |R| = 1.551905e-02
+      4 Linear |R| = 9.110573e-03
+      5 Linear |R| = 3.465057e-03
+      6 Linear |R| = 1.771455e-03
+      7 Linear |R| = 1.179344e-03
+      8 Linear |R| = 7.595744e-04
+      9 Linear |R| = 4.860022e-04
+     10 Linear |R| = 2.587072e-04
+     11 Linear |R| = 1.363596e-04
+     12 Linear |R| = 7.413423e-05
+     13 Linear |R| = 4.197308e-05
+     14 Linear |R| = 1.962597e-05
+     15 Linear |R| = 9.978091e-06
+     16 Linear |R| = 7.292749e-06
+     17 Linear |R| = 5.394724e-06
+     18 Linear |R| = 3.440501e-06
+     19 Linear |R| = 2.463009e-06
+     20 Linear |R| = 2.214822e-06
+     21 Linear |R| = 1.907490e-06
+     22 Linear |R| = 1.050673e-06
+     23 Linear |R| = 5.945177e-07
+     24 Linear |R| = 4.722046e-07
+     25 Linear |R| = 3.550286e-07
+     26 Linear |R| = 2.671171e-07
+     27 Linear |R| = 2.230059e-07
+     28 Linear |R| = 1.815995e-07
+ 1 Nonlinear |R| = 1.815995e-07
+      0 Linear |R| = 1.815995e-07
+      1 Linear |R| = 1.674404e-07
+      2 Linear |R| = 1.530575e-07
+      3 Linear |R| = 1.368355e-07
+      4 Linear |R| = 1.159652e-07
+      5 Linear |R| = 9.661189e-08
+      6 Linear |R| = 7.223615e-08
+      7 Linear |R| = 4.013030e-08
+      8 Linear |R| = 2.825640e-08
+      9 Linear |R| = 2.242183e-08
+     10 Linear |R| = 1.615707e-08
+     11 Linear |R| = 1.286391e-08
+     12 Linear |R| = 9.161819e-09
+     13 Linear |R| = 6.213091e-09
+     14 Linear |R| = 5.085535e-09
+     15 Linear |R| = 4.158678e-09
+     16 Linear |R| = 3.057241e-09
+     17 Linear |R| = 2.081839e-09
+     18 Linear |R| = 1.624448e-09
+     19 Linear |R| = 1.279492e-09
+     20 Linear |R| = 8.930595e-10
+     21 Linear |R| = 6.882405e-10
+     22 Linear |R| = 5.169261e-10
+     23 Linear |R| = 3.862526e-10
+     24 Linear |R| = 2.749193e-10
+     25 Linear |R| = 1.764680e-10
+     26 Linear |R| = 1.356474e-10
+     27 Linear |R| = 9.166298e-11
+     28 Linear |R| = 7.240390e-11
+     29 Linear |R| = 6.339634e-11
+     30 Linear |R| = 6.209549e-11
+     31 Linear |R| = 6.146740e-11
+     32 Linear |R| = 5.719005e-11
+     33 Linear |R| = 5.427857e-11
+     34 Linear |R| = 4.919413e-11
+     35 Linear |R| = 4.056252e-11
+     36 Linear |R| = 2.782648e-11
+     37 Linear |R| = 1.827710e-11
+     38 Linear |R| = 1.250041e-11
+     39 Linear |R| = 8.148058e-12
+     40 Linear |R| = 5.524795e-12
+     41 Linear |R| = 3.824154e-12
+     42 Linear |R| = 2.969067e-12
+     43 Linear |R| = 2.315395e-12
+     44 Linear |R| = 1.809661e-12
+ 2 Nonlinear |R| = 2.371900e-12
+ Solve Converged!
+
+Postprocessor Values:
++----------------+---------------------+
+| time           | average_temperature |
++----------------+---------------------+
+:                :                     :
+|   2.000000e+00 |        2.274827e+02 |
+|   4.000000e+00 |        3.274025e+02 |
+|   6.000000e+00 |        3.884758e+02 |
+|   8.000000e+00 |        4.276158e+02 |
+|   1.000000e+01 |        4.529677e+02 |
+|   1.200000e+01 |        4.694317e+02 |
+|   1.400000e+01 |        4.801310e+02 |
+|   1.600000e+01 |        4.870851e+02 |
+|   1.800000e+01 |        4.916053e+02 |
+|   2.000000e+01 |        4.945434e+02 |
+|   2.200000e+01 |        4.964532e+02 |
+|   2.400000e+01 |        4.976946e+02 |
+|   2.600000e+01 |        4.985015e+02 |
+|   2.800000e+01 |        4.990259e+02 |
+|   3.000000e+01 |        4.993669e+02 |
++----------------+---------------------+
+
+Finished Executing                                                                       [  8.95 s] [  410 MB]
