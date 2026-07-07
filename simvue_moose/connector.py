@@ -211,7 +211,6 @@ class MooseRun(WrappedRun):
         # Open the log file, and read header lines (which contains information about the MOOSE version used etc)
         with open(input_file) as file:
             file_lines = file.readlines()
-        file_lines = list(filter(None, file_lines))
 
         # Add the data from each line of the header into a dictionary as a key/value pair
         header_data = {"moose": {}}
@@ -543,7 +542,8 @@ class MooseRun(WrappedRun):
             Path to the MOOSE configuration file
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
-            These should be supplied relative to the output directory provided in the MOOSE file.
+            Results should be supplied relative to the output directory provided in the MOOSE file,
+            and/or specify the input file path as provided as input to `moose_file_path`.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
@@ -598,7 +598,8 @@ class MooseRun(WrappedRun):
             Path to the MOOSE configuration file
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
-            These should be supplied relative to the output directory provided in the MOOSE file.
+            Results should be supplied relative to the output directory provided in the MOOSE file,
+            and/or specify the input file path as provided as input to `moose_file_path`.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
