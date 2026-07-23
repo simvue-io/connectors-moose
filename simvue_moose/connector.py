@@ -437,7 +437,7 @@ class MooseRun(WrappedRun):
         metric_step = csv_data.pop("step", None)
         timestamp = sim_metadata.get("timestamp", "").replace(" ", "T")
 
-        if self._dt and not metric_step:
+        if self._dt and metric_step is None:
             # Has come from a scalar PostProcessor, can assume step = time / dt
             metric_step = int(metric_time / self._dt)
 
@@ -469,7 +469,7 @@ class MooseRun(WrappedRun):
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path in self.upload_files
+            self.upload_files is None or self.moose_file_path.name in self.upload_files
         ):
             self.save_file(self.moose_file_path, category="input")
 
@@ -604,7 +604,7 @@ class MooseRun(WrappedRun):
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
-            and/or specify the input file path as provided as input to `moose_file_path`.
+            and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
@@ -667,7 +667,7 @@ class MooseRun(WrappedRun):
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
-            and/or specify the input file path as provided as input to `moose_file_path`.
+            and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
@@ -686,7 +686,7 @@ class MooseRun(WrappedRun):
             )
 
         self.moose_file_path = moose_file_path
-        self.workdir_path = pathlib.Path().cwd()
+        self.workdir_path = pathlib.Path.cwd()
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
@@ -694,7 +694,7 @@ class MooseRun(WrappedRun):
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path in self.upload_files
+            self.upload_files is None or self.moose_file_path.name in self.upload_files
         ):
             self.save_file(self.moose_file_path, category="input")
 
@@ -721,7 +721,6 @@ class MooseRun(WrappedRun):
             # Parse line by line, matching regex patterns, upload as Events if found
             with open(log_path) as file:
                 file_lines = file.readlines()
-                file_lines = list(filter(None, file_lines))
 
                 for line in file_lines:
                     for label, pattern in self._patterns.items():
