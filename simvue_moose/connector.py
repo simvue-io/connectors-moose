@@ -704,7 +704,7 @@ class MooseRun(WrappedRun):
         # Extract useful information
         self._moose_input_callback(input_metadata)
 
-        if results_dir and results_dir.absolute() != self._output_dir_path.absolute():
+        if results_dir and results_dir.resolve() != self._output_dir_path.resolve():
             print(f"""
                   Warning: Output location specified in MOOSE file, '{self._output_dir_path}'
                   does not match results dir location given to load, '{results_dir}.'
