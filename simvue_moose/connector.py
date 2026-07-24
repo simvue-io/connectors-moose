@@ -41,7 +41,7 @@ class MooseRun(WrappedRun):
     _patterns: dict[str, typing.Pattern] = {
         "time_step": re.compile(r"Time Step (\d+), time = (\d+), dt = .*"),
         "converged": re.compile(r"\s*Solve Converged!\s*"),
-        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
+        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*", re.IGNORECASE),
         "terminated": re.compile(
             r"Terminator '(.+)' is causing the execution to terminate."
         ),
@@ -313,7 +313,7 @@ class MooseRun(WrappedRun):
                     self._step_num = int(match.group(1))
                     self._step_time = float(match.group(2))
 
-                elif name == "converged":
+                elif name in ("converged", "non_converged"):
                     if not self._loading_historic_run:
                         self.log_event(
                             f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
