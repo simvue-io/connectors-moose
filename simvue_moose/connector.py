@@ -124,7 +124,7 @@ class MooseRun(WrappedRun):
         """Find the directory and file prefix which results from the MOOSE file will be stored with.
 
         Should account for the following cases:
-            - No `file_base` provided - output to working dir, file prefix is input file stem
+            - No `file_base` provided - output to input file parent, file prefix is input file stem
             - Absolute `file_base` - set this as the output dir and prefix
             - Relative `file_base` - put files relative to working_dir
 
@@ -138,7 +138,7 @@ class MooseRun(WrappedRun):
         """
         if not self._file_base:
             # Uses working dir, with moose file name stem as prefix
-            return self.workdir_path, self.moose_file_path.stem
+            return self.moose_file_path.parent, self.moose_file_path.stem
 
         # Try splitting on final slash
         split = self._file_base.rsplit("/", maxsplit=1)
