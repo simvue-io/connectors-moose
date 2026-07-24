@@ -95,6 +95,7 @@ class MooseRun(WrappedRun):
         self.mpiexec_env_vars: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
+        self._file_base: str | None = None
         self._results_prefix: str = None
         self._time = time.time()
         # This represents the step number and time of the step, ie when MOOSE says 'Time Step X, time = Y'
@@ -118,7 +119,7 @@ class MooseRun(WrappedRun):
         )
 
     def _find_results_dir(
-        self, file_base: str | None = None
+        self,
     ) -> tuple[pathlib.Path, str]:
         """Find the directory and file prefix which results from the MOOSE file will be stored with.
 
@@ -126,11 +127,6 @@ class MooseRun(WrappedRun):
             - No `file_base` provided - output to working dir, file prefix is input file stem
             - Absolute `file_base` - set this as the output dir and prefix
             - Relative `file_base` - put files relative to working_dir
-
-        Parameters
-        ----------
-        file_base: str | None
-            The file_base defined in the MOOSE input file, if present
 
         Returns
         -------
@@ -140,12 +136,12 @@ class MooseRun(WrappedRun):
             The file prefix which results will be generated with
 
         """
-        if not file_base:
+        if not self._file_base:
             # Uses working dir, with moose file name stem as prefix
             return self.workdir_path, self.moose_file_path.stem
 
         # Try splitting on final slash
-        split = file_base.rsplit("/", maxsplit=1)
+        split = self._file_base.rsplit("/", maxsplit=1)
         # If not split, no slashes, so only contains file prefix
         if len(split) < 2:
             return self.workdir_path, split[0]
@@ -220,8 +216,8 @@ class MooseRun(WrappedRun):
 
         """
         # Find the location to output files
-        file_base = input_metadata.get("Outputs", {}).get("file_base", None)
-        self._output_dir_path, self._results_prefix = self._find_results_dir(file_base)
+        self._file_base = input_metadata.get("Outputs", {}).get("file_base", None)
+        self._output_dir_path, self._results_prefix = self._find_results_dir()
 
         if not input_metadata.get("Executioner", None):
             print(
@@ -379,7 +375,11 @@ class MooseRun(WrappedRun):
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).name
         vector_name, serial_num = file_name.replace(
-            f"{self._results_prefix}_", "", count=1
+            f"{self._results_prefix}_"
+            if self._file_base
+            else f"{self._results_prefix}_csv_",
+            "",
+            count=1,
         ).rsplit("_", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
@@ -512,8 +512,10 @@ class MooseRun(WrappedRun):
 
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+            self._output_dir_path.joinpath(
+                f"{self._results_prefix}.txt"
+                if self._file_base
+                else f"{self._results_prefix}_console.txt"
             ),
             parser_func=mp_tail_parser.log_parser(self._log_parser),
             # tracked_values=list(self._patterns.values()),
@@ -522,7 +524,11 @@ class MooseRun(WrappedRun):
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
             path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.csv"
+                    if self._file_base
+                    else f"{self._results_prefix}_csv.csv"
+                )
             ),
             parser_func=mp_tail_parser.record_csv,
             callback=self._per_metric_callback,
@@ -534,7 +540,11 @@ class MooseRun(WrappedRun):
         if self.track_vector_postprocessors:
             self.file_monitor.track(
                 path_glob_exprs=str(
-                    self._output_dir_path.joinpath(f"{self._results_prefix}_*.csv")
+                    self._output_dir_path.joinpath(
+                        f"{self._results_prefix}_*.csv"
+                        if self._file_base
+                        else f"{self._results_prefix}_csv_*.csv"
+                    )
                 ),
                 parser_func=self._vector_postprocessor_parser,
                 callback=self._per_metric_callback,
