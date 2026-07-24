@@ -39,14 +39,14 @@ class MooseRun(WrappedRun):
     """
 
     _patterns: dict[str, typing.Pattern] = {
-        "time_step": re.compile(r"Time Step.*"),
+        "time_step": re.compile(r"Time Step (\d+), time = (\d+), dt = .*"),
         "converged": re.compile(r"\s*Solve Converged!\s*"),
         "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
         "terminated": re.compile(
-            r"Terminator '.+' is causing the execution to terminate."
+            r"Terminator '(.+)' is causing the execution to terminate."
         ),
-        "nonlinear": re.compile(r" \d+ Nonlinear \|R\|"),
-        "linear": re.compile(r"     \d+ Linear \|R\|"),
+        "nonlinear": re.compile(r"\s*(\d+) Nonlinear \|R\|"),
+        "linear": re.compile(r"\s*(\d+) Linear \|R\|"),
     }
 
     def __init__(
@@ -105,6 +105,8 @@ class MooseRun(WrappedRun):
         self._linear = 0
         self._dt = None
         self._loading_historic_run = False
+        self._framework_info_header = False
+        self._header_metadata = {"moose": {}}
 
         super().__init__(
             mode=mode,
@@ -236,52 +238,121 @@ class MooseRun(WrappedRun):
 
         self.update_metadata({self.moose_file_path.stem: input_metadata})
 
-    @mp_file_parser.file_parser
-    def _moose_header_parser(
-        self, input_file: str, **__
-    ) -> tuple[dict[str, str], dict[str, str | float | int]]:
-        """Parse the header of the MOOSE log file and return the data from it as a dictionary.
+    def _framework_header_parser(self, line: str) -> None:
+        """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
 
         Parameters
         ----------
-        input_file : str
-            The path to the file where the console log is stored.
+        line : str
+            The line in the console log to parse.
+
+        """
+        # Add the data from the line of the header into the dictionary as a key/value pair
+        # Ignore blank lines and lines which don't contain a colon
+        if not line.strip() or ":" not in line:
+            return
+
+        key, value = line.split(":", 1)
+        value = value.strip()
+        # Ignore lines which correspond to 'titles'
+        if not value:
+            return
+
+        key = key.strip()
+        key = key.replace(" ", "_").lower()
+        # Replace any characters which will fail server side validation of key name with dashes
+        key = re.sub(r"[^\w\-\s\.]+", "-", key)
+
+        self._header_metadata["moose"][key] = value
+        return
+
+    def _log_parser(
+        self, file_content: str, **__
+    ) -> tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]:
+        """Parse a MOOSE log file line by line as it is written, and extract relevant information.
+
+        Parameters
+        ----------
+        file_content : str
+            The next line of the log file
         **__
             Additional unused keyword arguments
 
         Returns
         -------
-        tuple[dict[str, str], dict[str, str | float | int]]
-            An (empty) metadata dict,  and parsed data from the header of the MOOSE log file
+        tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]
+            An (empty) dictionary of metadata, and a dictionary of metrics data extracted from the log
 
         """
-        # Open the log file, and read header lines (which contains information about the MOOSE version used etc)
-        with open(input_file) as file:
-            file_lines = file.readlines()
-
-        # Add the data from each line of the header into a dictionary as a key/value pair
-        header_data = {"moose": {}}
-        for line in file_lines:
-            # Ignore blank lines and lines which don't contain a colon
-            if not line.strip() or ":" not in line:
+        for line in file_content.split("\n"):
+            # First, check if we are inside the framework information header
+            if "Framework Information:" in line:
+                self._framework_info_header = True
                 continue
-            # Break if execution has begun (outside of header)
-            if "Currently Executing" in line:
+            # Then check if we are in final line of this header
+            if "MOOSE Preconditioner:" in line:
+                self._framework_header_parser(line)
+                self._framework_info_header = False
+                self.update_metadata(self._header_metadata)
+                continue
+            if self._framework_info_header:
+                self._framework_header_parser(line)
+                continue
+
+            # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
+            for name, pattern in self._patterns.items():
+                match = pattern.search(line)
+                if not match:
+                    continue
+
+                if name in ("time_step", "converged", "non_converged", "terminated"):
+                    self.log_event(line.rstrip())
+
+                if name == "time_step":
+                    self._time = time.time()
+                    self._step_num = int(match.group(1))
+                    self._step_time = float(match.group(2))
+
+                elif name == "converged":
+                    if not self._loading_historic_run:
+                        self.log_event(
+                            f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
+                        )
+                    self.log_event(f" Total Nonlinear Iterations: {self._nonlinear}.")
+                    self.log_event(f" Total Linear Iterations: {self._linear}.")
+
+                    self.log_metrics(
+                        {
+                            "total_linear_iterations": self._linear,
+                            "total_nonlinear_iterations": self._nonlinear,
+                        },
+                        self._step_num,
+                        self._step_time,
+                    )
+
+                    self._linear = 0
+                    self._nonlinear = 0
+
+                # Keep track of total number of linear and nonlinear iterations in the solve
+                elif name == "nonlinear":
+                    self._nonlinear += 1
+                elif name == "linear":
+                    self._linear += 1
+
+                elif name == "terminated":
+                    self._terminated = True
+
+                    terminator = match.group(1)
+
+                    self.update_metadata({terminator: True})
+                    self.update_tags(
+                        [
+                            terminator,
+                        ]
+                    )
                 break
-            key, value = line.split(":", 1)
-            key = key.strip()
-            key = key.replace(" ", "_").lower()
-            # Replace any characters which will fail server side validation of key name with dashes
-            key = re.sub(r"[^\w\-\s\.]+", "-", key)
-            # Ignore lines which correspond to 'titles'
-            if not value:
-                continue
-            value = value.strip()
-            if not value:
-                continue
-            header_data["moose"][key] = value
 
-        return {}, header_data
+        return {}, {}
 
     @mp_file_parser.file_parser
     def _vector_postprocessor_parser(
@@ -343,82 +414,6 @@ class MooseRun(WrappedRun):
                     )
 
         return {}, metrics
-
-    def _per_event_callback(self, log_data: typing.Dict[str, str], _) -> bool:
-        """Look out for certain phrases in the MOOSE log, and adds them to the Events log.
-
-        Parameters
-        ----------
-        log_data : typing.Dict[str, str]
-            Phrases of interest identified by the file monitor
-
-        Returns
-        -------
-        bool
-            Returns False if unable to upload events, to signal an error
-
-        """
-        # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
-        if any(
-            key in ("time_step", "converged", "non_converged", "terminated")
-            for key in log_data.keys()
-        ):
-            try:
-                self.log_event(list(log_data.values())[0].rstrip())
-            except RuntimeError as e:
-                self._error(e)
-                return False
-
-        if "time_step" in log_data.keys():
-            self._time = time.time()
-
-            step_time = re.search(
-                r"Time Step (\d+), time = (\d+), dt = .*", log_data["time_step"]
-            )
-            if step_time:
-                self._step_num = int(step_time.group(1))
-                self._step_time = float(step_time.group(2))
-
-        elif "converged" in log_data.keys():
-            if not self._loading_historic_run:
-                self.log_event(
-                    f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
-                )
-            self.log_event(f" Total Nonlinear Iterations: {self._nonlinear}.")
-            self.log_event(f" Total Linear Iterations: {self._linear}.")
-
-            self.log_metrics(
-                {
-                    "total_linear_iterations": self._linear,
-                    "total_nonlinear_iterations": self._nonlinear,
-                },
-                self._step_num,
-                self._step_time,
-            )
-
-            self._linear = 0
-            self._nonlinear = 0
-
-        # Keep track of total number of linear and nonlinear iterations in the solve
-        elif "nonlinear" in log_data.keys():
-            self._nonlinear += 1
-        elif "linear" in log_data.keys():
-            self._linear += 1
-
-        elif "terminated" in log_data.keys():
-            self._terminated = True
-
-            terminator = re.search(
-                r"Terminator '(.+)' is causing the execution to terminate.",
-                log_data["terminated"],
-            ).group(1)
-
-            self.update_metadata({terminator: True})
-            self.update_tags(
-                [
-                    terminator,
-                ]
-            )
 
     def _per_metric_callback(
         self, csv_data: typing.Dict[str, float], sim_metadata: typing.Dict[str, str]
@@ -515,25 +510,14 @@ class MooseRun(WrappedRun):
         # Record time here, for that for static problems the overall time for execution will be returned
         self._time = time.time()
 
-        # Read the initial information within the log file when it is first created, to parse the header information
-        self.file_monitor.track(
-            path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
-            ),
-            callback=lambda header_data, metadata: self.update_metadata(
-                {**header_data, **metadata}
-            ),
-            parser_func=self._moose_header_parser,
-            static=True,
-        )
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
             path_glob_exprs=str(
                 self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
             ),
-            callback=self._per_event_callback,
-            tracked_values=list(self._patterns.values()),
-            labels=list(self._patterns.keys()),
+            parser_func=mp_tail_parser.log_parser(self._log_parser),
+            # tracked_values=list(self._patterns.values()),
+            # labels=list(self._patterns.keys()),
         )
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
@@ -714,21 +698,12 @@ class MooseRun(WrappedRun):
 
         log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
         if log_path.exists():
-            # Pass into header callback to extract metadata
-            _, metadata = self._moose_header_parser(input_file=str(log_path))
-            self.update_metadata(metadata)
-
             # Parse line by line, matching regex patterns, upload as Events if found
             with open(log_path) as file:
                 file_lines = file.readlines()
 
                 for line in file_lines:
-                    for label, pattern in self._patterns.items():
-                        match = pattern.search(line)
-                        if not match:
-                            continue
-                        self._per_event_callback({label: match.group(0)}, {})
-                        break
+                    self._log_parser(line)
 
         # Extract metrics CSV file
         csv_path = self._output_dir_path.joinpath(f"{self._results_prefix}.csv")

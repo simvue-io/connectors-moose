@@ -55,10 +55,11 @@ def test_moose_log_parser(folder_setup):
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
     events = client.get_events(run_id)
-    assert events[2]["message"] == "Time Step 1, time = 1, dt = 1"
-    assert events[3]["message"] == " Solve Converged!"
-    assert events[5]["message"] == " Total Nonlinear Iterations: 3."
-    assert events[6]["message"] == " Total Linear Iterations: 112."
+
+    assert events[1]["message"] == "Time Step 1, time = 1, dt = 1"
+    assert events[2]["message"] == " Solve Converged!"
+    assert events[4]["message"] == " Total Nonlinear Iterations: 3."
+    assert events[5]["message"] == " Total Linear Iterations: 112."
     assert (
         events[-2]["message"]
         == "Terminator 'handle-too-hot' is causing the execution to terminate."
