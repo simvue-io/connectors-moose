@@ -379,7 +379,7 @@ class MooseRun(WrappedRun):
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).name
         vector_name, serial_num = file_name.replace(
-            f"{self._results_prefix}_", ""
+            f"{self._results_prefix}_", "", count=1
         ).rsplit("_", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
