@@ -15,6 +15,7 @@ def mock_moose_process(self, *_, **__):
     temp_logfile = tempfile.NamedTemporaryFile(
         mode="w", prefix="moose_test_", suffix=".txt", buffering=1
     )
+    self._file_base = temp_logfile.name
     self._results_prefix = pathlib.Path(temp_logfile.name).name.split(".")[0]
     self._output_dir_path = pathlib.Path(temp_logfile.name).parent
 

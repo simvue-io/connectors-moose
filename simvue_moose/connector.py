@@ -379,7 +379,7 @@ class MooseRun(WrappedRun):
             if self._file_base
             else f"{self._results_prefix}_csv_",
             "",
-            count=1,
+            1,
         ).rsplit("_", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time

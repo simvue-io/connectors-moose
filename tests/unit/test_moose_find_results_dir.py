@@ -8,9 +8,19 @@ WORKDIR = pathlib.Path(__file__).parent.joinpath("example_data")
 @pytest.mark.parametrize(
     ("working_dir", "file_base", "expected_output_dir", "expected_prefix"),
     [
-        # No file_base - results in workdir, with prefix matching input file
-        [None, None, pathlib.Path.cwd(), "example_input_1"],
-        [WORKDIR, None, WORKDIR, "example_input_1"],
+        # No file_base - results in input file parent, with prefix matching input file
+        [
+            None,
+            None,
+            pathlib.Path(__file__).joinpath("example_data"),
+            "example_input_1",
+        ],
+        [
+            WORKDIR,
+            None,
+            pathlib.Path(__file__).joinpath("example_data"),
+            "example_input_1",
+        ],
         # file_base absolute path with no prefix, results stored in that dir (with no prefix)
         [None, "/tmp/", pathlib.Path("/tmp"), ""],
         [WORKDIR, "/tmp/", pathlib.Path("/tmp"), ""],
@@ -52,7 +62,8 @@ def test_find_results_dir(
         run.moose_file_path = pathlib.Path(__file__).joinpath(
             "example_data", "example_input_1.i"
         )
-        output_dir, prefix = run._find_results_dir(file_base)
+        run._file_base = file_base
+        output_dir, prefix = run._find_results_dir()
 
         assert output_dir == expected_output_dir
         assert prefix == expected_prefix

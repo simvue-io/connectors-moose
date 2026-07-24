@@ -27,6 +27,7 @@ def mock_moose_process(self, *_, **__):
 
 
 @patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_header_parser(folder_setup):
     """
@@ -39,7 +40,9 @@ def test_moose_header_parser(folder_setup):
         run.init(name=name, folder=folder_setup)
         run_id = run.id
         # Set these here instead of them being read from a MOOSE input file
+        run._file_base = temp_dir.name + "/moose_test"
         run._output_dir_path = pathlib.Path(temp_dir.name)
+        print(run._output_dir_path)
         run._results_prefix = "moose_test"
 
         run.launch(
