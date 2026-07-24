@@ -512,10 +512,12 @@ class MooseRun(WrappedRun):
 
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            self._output_dir_path.joinpath(
-                f"{self._results_prefix}.txt"
-                if self._file_base
-                else f"{self._results_prefix}_console.txt"
+            path_glob_exprs=str(
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.txt"
+                    if self._file_base
+                    else f"{self._results_prefix}_console.txt"
+                )
             ),
             parser_func=mp_tail_parser.log_parser(self._log_parser),
             # tracked_values=list(self._patterns.values()),
