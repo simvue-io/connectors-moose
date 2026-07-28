@@ -122,7 +122,7 @@ class MooseRun(WrappedRun):
         """Find the directory and file prefix which results from the MOOSE file will be stored with.
 
         Should account for the following cases:
-            - No `file_base` provided - output to working dir, file prefix is input file stem
+            - No `file_base` provided - output to input file parent, file prefix is input file stem
             - Absolute `file_base` - set this as the output dir and prefix
             - Relative `file_base` - put files relative to working_dir
 
@@ -136,7 +136,7 @@ class MooseRun(WrappedRun):
         """
         if not self._file_base:
             # Uses working dir, with moose file name stem as prefix
-            return self.workdir_path, self.moose_file_path.stem
+            return self.moose_file_path.parent, self.moose_file_path.stem
 
         # Try splitting on final slash
         split = self._file_base.rsplit("/", maxsplit=1)
@@ -308,6 +308,7 @@ class MooseRun(WrappedRun):
             if self._file_base
             else f"{self._results_prefix}_csv_",
             "",
+            1,
         ).rsplit("_", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
@@ -531,10 +532,12 @@ class MooseRun(WrappedRun):
         )
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            self._output_dir_path.joinpath(
-                f"{self._results_prefix}.txt"
-                if self._file_base
-                else f"{self._results_prefix}_console.txt"
+            path_glob_exprs=str(
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.txt"
+                    if self._file_base
+                    else f"{self._results_prefix}_console.txt"
+                )
             ),
             callback=self._per_event_callback,
             tracked_values=list(self._patterns.values()),

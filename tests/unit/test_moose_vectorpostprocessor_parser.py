@@ -62,6 +62,7 @@ def test_moose_vectorpostprocessor_parser_no_positions(folder_setup):
         run.init(name=name, folder=folder_setup)
         run_id = run.id
         # Set these here instead of them being read from a MOOSE input file
+        run._file_base = temp_dir.name + "/moose"
         run._output_dir_path = pathlib.Path(temp_dir.name)
         run._results_prefix = "moose"
 
@@ -115,6 +116,7 @@ def test_moose_vectorpostprocessor_parser_with_positions(folder_setup):
         run.init(name=name, folder=folder_setup)
         run_id = run.id
         # Set these here instead of them being read from a MOOSE input file
+        run._file_base = temp_dir.name + "/moose"
         run._output_dir_path = pathlib.Path(temp_dir.name)
         run._results_prefix = "moose"
 
@@ -167,6 +169,7 @@ def test_moose_vectorpostprocessor_disabled(folder_setup):
         run.init(name=name, folder=folder_setup)
         run_id = run.id
         # Set these here instead of them being read from a MOOSE input file
+        run._file_base = temp_dir.name + "/moose"
         run._output_dir_path = pathlib.Path(temp_dir.name)
         run._results_prefix = "moose"
 
