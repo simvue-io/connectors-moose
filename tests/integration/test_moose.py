@@ -214,9 +214,6 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
     )
 
     with tempfile.TemporaryDirectory() as tempd:
-        # Change current working directory
-        monkeypatch.chdir(tempd)
-
         # Replace file base
         text = moose_file_path.read_text()
         if file_base == "absolute":
@@ -245,6 +242,9 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             )
 
             run_id = run.id
+
+            # Change current working directory
+            monkeypatch.chdir(tempd)
 
             run.launch(
                 moose_application_path=MOOSE_APP_PATH,
