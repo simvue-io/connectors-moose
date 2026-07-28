@@ -728,7 +728,11 @@ class MooseRun(WrappedRun):
                   """)
             self._output_dir_path = results_dir
 
-        log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+        log_path = self._output_dir_path.joinpath(
+            f"{self._results_prefix}.txt"
+            if self._file_base
+            else f"{self._results_prefix}_console.txt"
+        )
         if log_path.exists():
             # Pass into header callback to extract metadata
             _, metadata = self._moose_header_parser(input_file=str(log_path))
@@ -747,7 +751,11 @@ class MooseRun(WrappedRun):
                         break
 
         # Extract metrics CSV file
-        csv_path = self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+        csv_path = (
+            self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+            if self._file_base
+            else self._output_dir_path.joinpath(f"{self._results_prefix}_csv.csv")
+        )
         if csv_path.exists():
             with open(csv_path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
@@ -756,7 +764,11 @@ class MooseRun(WrappedRun):
                     self._per_metric_callback(_data, {})
 
         if self.track_vector_postprocessors:
-            csv_paths = self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
+            csv_paths = (
+                self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
+                if self._file_base
+                else self._output_dir_path.glob(f"{self._results_prefix}_csv_*.csv")
+            )
             for path in csv_paths:
                 if path == self._output_dir_path.joinpath(
                     f"{self._results_prefix}_*_time.csv"
