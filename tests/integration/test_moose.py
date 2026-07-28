@@ -231,7 +231,7 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             )
 
         # Create new copy of input file
-        pathlib.Path(tempd).write_text(text)
+        pathlib.Path(tempd).joinpath("thermal_bar.i").write_text(text)
 
         # Initialise the MooseRun class as a context manager
         with MooseRun() as run:
