@@ -463,7 +463,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern=" Solve Did NOT Converge!",
+            pattern=" Solve Did NOT Converge",
             notification="email",
         )
 
