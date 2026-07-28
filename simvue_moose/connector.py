@@ -457,12 +457,6 @@ class MooseRun(WrappedRun):
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
 
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Extract useful information
-        self._moose_input_callback(input_metadata)
-
         # Add alert for a non converging step
         self.create_event_alert(
             name="step_not_converged",
@@ -470,6 +464,18 @@ class MooseRun(WrappedRun):
             pattern=" Solve Did NOT Converge",
             notification="email",
         )
+
+        # Ensure workdir path exists
+        self.workdir_path.mkdir(parents=True, exist_ok=True)
+
+        # If not cwd, create copy of input file into this path
+        if self.workdir_path.resolve() != pathlib.Path.cwd().resolve():
+            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
+            shutil.copy(
+                self.moose_file_path,
+                moose_file_copy,
+            )
+            self.moose_file_path = moose_file_copy
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
@@ -488,17 +494,11 @@ class MooseRun(WrappedRun):
                 category="input",
             )
 
-        # Ensure workdir path exists
-        self.workdir_path.mkdir(parents=True, exist_ok=True)
+        # Parse the MOOSE input file
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
-        # If not cwd, create copy of input file into this path
-        if self.workdir_path.resolve() != pathlib.Path.cwd().resolve():
-            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
-            shutil.copy(
-                self.moose_file_path,
-                moose_file_copy,
-            )
-            self.moose_file_path = moose_file_copy
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
 
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []

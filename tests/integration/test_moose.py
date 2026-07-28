@@ -270,11 +270,15 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             if workdir_path:
                 assert (
                     pathlib.Path(tempd)
-                    .joinpath("my_results", "simvue_thermal.txt")
+                    .joinpath("my_results", "test_results", "simvue_thermal.txt")
                     .exists()
                 )
             else:
-                assert pathlib.Path(tempd).joinpath("simvue_thermal.txt").exists()
+                assert (
+                    pathlib.Path(tempd)
+                    .joinpath("test_results", "simvue_thermal.txt")
+                    .exists()
+                )
         else:
             # Files given default names, starting with name of input file
             if workdir_path:
@@ -368,4 +372,4 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
         if file_base:
             assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
         else:
-            assert pathlib.Path(temp_dir).joinpath("thermal_bar_exodue.e").exists()
+            assert pathlib.Path(temp_dir).joinpath("thermal_bar_exodus.e").exists()
