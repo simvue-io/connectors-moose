@@ -488,6 +488,18 @@ class MooseRun(WrappedRun):
                 category="input",
             )
 
+        # Ensure workdir path exists
+        self.workdir_path.mkdir(parents=True, exist_ok=True)
+
+        # If not cwd, create copy of input file into this path
+        if self.workdir_path.resolve() != pathlib.Path.cwd().resolve():
+            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
+            shutil.copy(
+                self.moose_file_path,
+                moose_file_copy,
+            )
+            self.moose_file_path = moose_file_copy
+
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
         if self.run_in_parallel:
@@ -501,18 +513,6 @@ class MooseRun(WrappedRun):
             "off",
         ]
         command += format_command_env_vars(self.moose_env_vars)
-
-        # Ensure workdir path exists
-        self.workdir_path.mkdir(parents=True, exist_ok=True)
-
-        # If not cwd, create copy of input file into this path
-        if self.workdir_path.resolve() != pathlib.Path.cwd().resolve():
-            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
-            shutil.copy(
-                self.moose_file_path,
-                moose_file_copy,
-            )
-            self.moose_file_path = moose_file_copy
 
         self.add_process(
             "moose_simulation",
