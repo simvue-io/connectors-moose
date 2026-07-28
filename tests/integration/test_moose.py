@@ -209,13 +209,13 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
 
-    moose_file_path = pathlib.Path(__file__).parent.joinpath(
-        "example_data", "thermal_bar.i"
-    )
-
     with tempfile.TemporaryDirectory() as tempd:
         # Replace file base
-        text = moose_file_path.read_text()
+        text = (
+            pathlib.Path(__file__)
+            .parent.joinpath("example_data", "thermal_bar.i")
+            .read_text()
+        )
         if file_base == "absolute":
             text = text.replace(
                 "  file_base = test_results/simvue_thermal",
@@ -226,9 +226,12 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
                 "  file_base = test_results/simvue_thermal",
                 "  ",
             )
+        import pdb
 
+        pdb.set_trace()
         # Create new copy of input file
-        pathlib.Path(tempd).joinpath("thermal_bar.i").write_text(text)
+        moose_file_path = pathlib.Path(tempd).joinpath("thermal_bar.i")
+        moose_file_path.write_text(text)
 
         # Initialise the MooseRun class as a context manager
         with MooseRun() as run:
