@@ -507,10 +507,12 @@ class MooseRun(WrappedRun):
 
         # If not cwd, create copy of input file into this path
         if self.workdir_path.resolve() != pathlib.Path.cwd().resolve():
+            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
             shutil.copy(
                 self.moose_file_path,
-                self.workdir_path.joinpath(self.moose_file_path.name),
+                moose_file_copy,
             )
+            self.moose_file_path = moose_file_copy
 
         self.add_process(
             "moose_simulation",

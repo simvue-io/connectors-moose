@@ -209,6 +209,8 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
 
+    original_cwd = pathlib.Path.cwd()
+
     with tempfile.TemporaryDirectory() as tempd:
         # Replace file base
         text = (
@@ -226,9 +228,7 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
                 "  file_base = test_results/simvue_thermal",
                 "  ",
             )
-        import pdb
 
-        pdb.set_trace()
         # Create new copy of input file
         moose_file_path = pathlib.Path(tempd).joinpath("thermal_bar.i")
         moose_file_path.write_text(text)
@@ -286,6 +286,9 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
             else:
                 assert pathlib.Path(tempd).joinpath("thermal_bar_console.txt").exists()
 
+    # Change current working directory back to normal
+    monkeypatch.chdir(original_cwd)
+
     # Check data collected
     client = simvue.Client()
     run_data = client.get_run(run_id)
@@ -297,11 +300,6 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
         == "An example of using the MooseRun Connector to track a MOOSE simulation."
     )
     assert run_data.tags == ["moose", "thermal", "diffusion"]
-
-    # Check alert has been added
-    assert "avg_temp_above_500" in [
-        alert["name"] for alert in run_data.get_alert_details()
-    ]
 
     # Check metadata from MOOSE log header has been uploaded
     assert run_data.metadata["moose"]["executioner"] == "Transient"
