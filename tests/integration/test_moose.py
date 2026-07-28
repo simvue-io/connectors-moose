@@ -237,7 +237,7 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
         with MooseRun() as run:
             # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
             run.init(
-                name=f"fds-integration-file_base={file_base}-{str(uuid.uuid4())}",
+                name=f"fds-integration-file_base-{file_base}-working_dir-{str(workdir_path)}-{str(uuid.uuid4())}",
                 description="An example of using the MooseRun Connector to track a MOOSE simulation.",
                 folder="/test-moose",
                 tags=["moose", "thermal", "diffusion"],
