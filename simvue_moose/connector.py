@@ -316,7 +316,7 @@ class MooseRun(WrappedRun):
                     continue
 
                 if name in ("time_step", "converged", "non_converged", "terminated"):
-                    self.log_event(line.rstrip())
+                    self.log_event(line.rstrip().title())
 
                 if name == "time_step":
                     self._time = time.time()
@@ -509,7 +509,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern=" Solve Did NOT Converge",
+            pattern="Solve Did Not Converge",
             notification="email",
         )
         if self.workdir_path:
