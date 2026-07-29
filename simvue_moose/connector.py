@@ -10,6 +10,9 @@ import shutil
 import time
 import typing
 from functools import reduce
+from itertools import islice
+
+import numpy
 
 try:
     from typing import Self
@@ -18,6 +21,7 @@ except ImportError:
 
 import multiparser.parsing.file as mp_file_parser
 import multiparser.parsing.tail as mp_tail_parser
+import pandas
 import pydantic
 import simvue
 from simvue_connector.connector import WrappedRun
@@ -88,7 +92,6 @@ class MooseRun(WrappedRun):
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.track_vector_postprocessors: bool = None
-        self.track_vector_positions: bool = None
         self.moose_env_vars: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
@@ -105,6 +108,7 @@ class MooseRun(WrappedRun):
         self._nonlinear = 0
         self._linear = 0
         self._dt = None
+        self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
         self._header_metadata = {"moose": {}}
@@ -365,7 +369,7 @@ class MooseRun(WrappedRun):
         self,
         input_file: str,
         **__,
-    ) -> tuple[dict[str, str], dict[str, float | int]]:
+    ) -> tuple[dict[str, str], dict[str, numpy.ndarray]]:
         """Parse data from VectorPostProcessor CSV files.
 
         Parameters
@@ -377,13 +381,14 @@ class MooseRun(WrappedRun):
 
         Returns
         -------
-        tuple[dict[str, str], dict[str, float | int]]
+        tuple[dict[str, str], dict[str, numpy.ndarray]]
             A dictionary of metadata and data contained in the CSV file
 
         """
         metrics = {}
+        current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
-        file_name = pathlib.Path(input_file).name
+        file_name = pathlib.Path(input_file).stem
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_"
             if self._file_base
@@ -391,53 +396,95 @@ class MooseRun(WrappedRun):
             "",
             1,
         ).rsplit("_", 1)
+        serial_num = int(serial_num)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
         time_file = f"{input_file.rsplit('_', 1)[0]}_time.csv"
         if pathlib.Path(time_file).exists():
             with open(time_file, newline="\n") as in_t:
-                final_line = [in_t.readlines()[-1]]
-                current_time_data = next(csv.reader(final_line))
-                metrics["time"] = current_time_data[0]
-                metrics["step"] = current_time_data[1]
+                reader = csv.reader(in_t)
+                # Read line in time file corresponding to this step
+                # + 1 to skip header
+                current_time_data = next(
+                    islice(reader, serial_num + 1, serial_num + 2), None
+                )
+        if current_time_data:
+            metrics["time"] = current_time_data[0]
+            metrics["step"] = current_time_data[1]
         else:
-            metrics["step"] = int(serial_num.split(".")[0])
+            metrics["step"] = int(serial_num)
             if self._dt:
                 metrics["time"] = metrics["step"] * self._dt
 
-        with open(input_file, newline="") as in_f:
-            read_csv = csv.DictReader(in_f)
+        data = pandas.read_csv(input_file)
 
-            for csv_data in read_csv:
-                if not self.track_vector_positions:
-                    csv_data.pop("x", None)
-                    csv_data.pop("y", None)
-                    csv_data.pop("z", None)
-                    csv_data.pop("radius", None)
+        varying_dims = []
+        for coord in ("x", "y", "z", "radius"):
+            if coord not in data.columns:
+                continue
 
-                if _id := csv_data.pop("id", None):
-                    metrics.update(
-                        {
-                            f"{vector_name}.{key}.{_id}": value
-                            for (key, value) in csv_data.items()
-                        }
+            dimension = data.pop(coord)
+
+            if dimension.nunique() == 0:
+                continue
+            elif dimension.nunique() != 1:
+                varying_dims.append(dimension)
+
+        if "id" in data.columns:
+            _id = data.pop("id")
+            if len(varying_dims) < 1 and _id.nunique() > 0:
+                # Fallback to using ID as axis if no coord found
+                varying_dims.append(_id)
+
+        if len(varying_dims) > 1:
+            print(
+                f"Warning: VectorPostProcessor {vector_name} varies in more than one dimension, which is unsupported. Ignoring..."
+            )
+            self._unsupported_vectors.append(vector_name)
+            if not self._loading_historic_run:
+                self.file_monitor.exclude(
+                    str(
+                        self._output_dir_path.joinpath(
+                            f"{self._results_prefix}_{vector_name}_[0-9]*.csv"
+                        )
                     )
+                )
+            return {}, {}
+        if len(varying_dims) < 1:
+            # Likely an empty file representing initial conditions, ignore...
+            return {}, {}
+
+        for col in data.columns:
+            metric_name = f"{vector_name}.{col}"
+            # Assign to grid if required
+            if metric_name not in self._grids.keys():
+                self.assign_metric_to_grid(
+                    metric_name=metric_name,
+                    axes_ticks=[varying_dims[0].values],
+                    axes_labels=[varying_dims[0].name],
+                )
+            metrics[metric_name] = data[col].values
 
         return {}, metrics
 
     def _per_metric_callback(
-        self, csv_data: typing.Dict[str, float], sim_metadata: typing.Dict[str, str]
-    ):
+        self,
+        csv_data: typing.Dict[str, float | numpy.ndarray],
+        sim_metadata: typing.Dict[str, str],
+    ) -> None:
         """Monitor each line in the results CSV file, and add data from it to Simvue Metrics.
 
         Parameters
         ----------
-        csv_data : typing.Dict[str, float]
+        csv_data : typing.Dict[str, float | numpy.ndarray]
             The data from the latest line in the CSV file
         sim_metadata : typing.Dict[str, str]
             The metadata about when this line was read by Multiparser
 
         """
+        if not csv_data:
+            return
+
         metric_time = csv_data.pop("time", None)
         metric_step = csv_data.pop("step", None)
         timestamp = sim_metadata.get("timestamp", "").replace(" ", "T")
@@ -599,7 +646,6 @@ class MooseRun(WrappedRun):
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
-        track_vector_positions: bool = False,
         moose_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
@@ -625,8 +671,6 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        track_vector_positions: bool, optional
-            Whether to create metrics for the positions given in Vector PostProcessor output at each time step (x, y, z, radius), by default False
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any environment variables to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
@@ -636,23 +680,12 @@ class MooseRun(WrappedRun):
         mpiexec_env_vars : typing.Optional[typing.Dict[str, typing.Any]]
             Any environment variables to pass to mpiexec on startup if running in parallel, by default None
 
-        Raises
-        ------
-        ValueError
-            Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
-
         """
-        if track_vector_positions and not track_vector_postprocessors:
-            raise ValueError(
-                "Vector positions can only be tracked if vector postprocessor tracking is enabled."
-            )
-
         self.moose_application_path = moose_application_path
         self.moose_file_path = moose_file_path
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.track_vector_positions = track_vector_positions
         self.moose_env_vars = moose_env_vars or {}
         self.run_in_parallel = run_in_parallel
         self.num_processors = num_processors
@@ -668,7 +701,6 @@ class MooseRun(WrappedRun):
         results_dir: pydantic.DirectoryPath | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
-        track_vector_positions: bool = False,
     ):
         """Command to load a set of results from a MOOSE simulation into Simvue.
 
@@ -686,26 +718,16 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        track_vector_positions: bool, optional
-            Whether to create metrics for the positions given in Vector PostProcessor output at each time step (x, y, z, radius), by default False
 
         Raises
         ------
-        ValueError
-            Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
         FileNotFoundError
             Raised if no results directory is found at expected location
 
         """
-        if track_vector_positions and not track_vector_postprocessors:
-            raise ValueError(
-                "Vector positions can only be tracked if vector postprocessor tracking is enabled."
-            )
-
         self.moose_file_path = moose_file_path
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.track_vector_positions = track_vector_positions
         self._loading_historic_run = True
 
         # Save the MOOSE file for this run to the Simvue server
@@ -766,8 +788,11 @@ class MooseRun(WrappedRun):
                 else self._output_dir_path.glob(f"{self._results_prefix}_csv_*.csv")
             )
             for path in csv_paths:
-                if path == self._output_dir_path.joinpath(
-                    f"{self._results_prefix}_*_time.csv"
+                if path.match(f"{self._results_prefix}_*_time.csv") or any(
+                    (
+                        path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
+                        for vector_name in self._unsupported_vectors
+                    )
                 ):
                     continue
                 _, data = self._vector_postprocessor_parser(input_file=str(path))

@@ -113,7 +113,6 @@ if __name__ == "__main__":
             moose_application_path='path/to/my/moose/app',    # Path to MOOSE application
             moose_file_path='path/to/my/input_file.i',        # Path to MOOSE input file
             track_vector_postprocessors=True,                 # Whether to track vector postprocessors
-            track_vector_positions=False,                     # Whether to track positions of vectors
             run_in_parallel=True,                             # Whether to run in parallel using MPI
             num_processors=2                                  # Number of cores to use if in parallel
 
