@@ -8,7 +8,7 @@ WORKDIR = pathlib.Path(__file__).parent.joinpath("example_data")
 @pytest.mark.parametrize(
     ("working_dir", "file_base", "expected_output_dir", "expected_prefix"),
     [
-        # No file_base - results in input file parent, with prefix matching input file
+        # No file_base - results in workdir, with prefix matching input file
         [
             None,
             None,
