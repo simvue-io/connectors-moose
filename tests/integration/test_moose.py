@@ -334,23 +334,14 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
     assert list(sample_metric.index.levels[0]) == list(range(0, 16, 1))
 
     # Check metrics uploaded from VectorPostProcessor CSV
-    assert metrics["temperature_along_bar.T.1"]["max"] > 498
+    metric = next(
+        GridMetrics.get(runs=[run_id], metrics=["temperature_along_bar.T"], step=15)
+    )
+    assert len(metric["array"]) == 3
+    assert metric["array"][1] > 498
 
-    # Check time and step data is correct - starts from first step, since file PostProcessor file 0000 is blank
-    sample_metric = client.get_metric_values(
-        metric_names=["temperature_along_bar.T.0"],
-        xaxis="time",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric.index.levels[0]) == list(range(2, 32, 2))
-    sample_metric = client.get_metric_values(
-        metric_names=["temperature_along_bar.T.2"],
-        xaxis="step",
-        output_format="dataframe",
-        run_ids=[run_id],
-    )
-    assert list(sample_metric.index.levels[0]) == list(range(1, 16, 1))
+    # Check time and step data is correct - time is 2x step
+    assert metric["time"] == 30
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Check input file uploaded as input
