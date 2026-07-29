@@ -15,6 +15,7 @@ def mock_moose_process(self, *_, **__):
     temp_logfile = tempfile.NamedTemporaryFile(
         mode="w", prefix="moose_test_", suffix=".txt", buffering=1
     )
+    self._file_base = temp_logfile.name
     self._results_prefix = pathlib.Path(temp_logfile.name).name.split(".")[0]
     self._output_dir_path = pathlib.Path(temp_logfile.name).parent
 
@@ -37,7 +38,7 @@ def mock_moose_process(self, *_, **__):
     thread.start()
 
 
-@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: None)
+@patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_log_parser(folder_setup):
     """

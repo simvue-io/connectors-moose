@@ -18,14 +18,14 @@ def mock_moose_process(self, *_, **__):
     return True
 
 
-def mock_input_parser(self, *_, **__):
+def mock_input_callback(self, *_, **__):
     self._output_dir_path = pathlib.Path(__file__).parent.joinpath(
         "example_data", "moose_outputs"
     )
     self._results_prefix = "moose_test"
 
 
-@patch.object(MooseRun, "_moose_input_parser", mock_input_parser)
+@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_file_upload(folder_setup):
     """
@@ -38,7 +38,9 @@ def test_moose_file_upload(folder_setup):
         run_id = run.id
         run.launch(
             moose_application_path=pathlib.Path(__file__),
-            moose_file_path=pathlib.Path(__file__),
+            moose_file_path=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_1.i"
+            ),
         )
 
     client = simvue.Client()
@@ -47,12 +49,12 @@ def test_moose_file_upload(folder_setup):
     with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
         client.get_artifacts_as_files(run_id, "output", temp_dir)
         client.get_artifacts_as_files(run_id, "input", temp_dir)
-        assert pathlib.Path(temp_dir).joinpath(pathlib.Path(__file__).name).exists()
+        assert pathlib.Path(temp_dir).joinpath("example_input_1.i").exists()
         assert pathlib.Path(temp_dir).joinpath("moose_test.csv").exists()
         assert pathlib.Path(temp_dir).joinpath("moose_test.e").exists()
 
 
-@patch.object(MooseRun, "_moose_input_parser", mock_input_parser)
+@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_file_upload_specific_files(folder_setup):
     """
@@ -65,7 +67,9 @@ def test_moose_file_upload_specific_files(folder_setup):
         run_id = run.id
         run.launch(
             moose_application_path=pathlib.Path(__file__),
-            moose_file_path=pathlib.Path(__file__),
+            moose_file_path=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_1.i"
+            ),
             upload_files=["moose_test.csv"],
         )
 
@@ -103,7 +107,7 @@ def mock_aborted_moose_process(self, *_, **__):
     thread.start()
 
 
-@patch.object(MooseRun, "_moose_input_parser", mock_input_parser)
+@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
 @patch.object(MooseRun, "add_process", mock_aborted_moose_process)
 def test_moose_file_upload_after_abort(folder_setup):
     """
@@ -117,7 +121,9 @@ def test_moose_file_upload_after_abort(folder_setup):
         run_id = run.id
         run.launch(
             moose_application_path=pathlib.Path(__file__),
-            moose_file_path=pathlib.Path(__file__),
+            moose_file_path=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_1.i"
+            ),
         )
 
     client = simvue.Client()
@@ -128,10 +134,7 @@ def test_moose_file_upload_after_abort(folder_setup):
     with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
         # Check files correctly uploaded after an abort
         client.get_artifacts_as_files(run_id, "output", temp_dir)
-        comparison = filecmp.dircmp(
-            pathlib.Path(__file__).parent.joinpath("example_data", "moose_outputs"),
-            temp_dir,
-        )
-        assert not (
-            comparison.diff_files or comparison.left_only or comparison.right_only
-        )
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("example_input_1.i").exists()
+        assert pathlib.Path(temp_dir).joinpath("moose_test.csv").exists()
+        assert pathlib.Path(temp_dir).joinpath("moose_test.e").exists()

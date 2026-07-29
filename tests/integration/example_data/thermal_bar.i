@@ -70,7 +70,7 @@
   solve_type = NEWTON
 []
 [Outputs]
-  file_base = $OUTPUT_PATH
+  file_base = test_results/simvue_thermal
   [exodus]
     type = Exodus
   []

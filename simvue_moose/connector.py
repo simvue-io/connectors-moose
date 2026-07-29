@@ -6,6 +6,7 @@ This module provides functionality for using Simvue to track and monitor a MOOSE
 import csv
 import pathlib
 import re
+import shutil
 import time
 import typing
 from functools import reduce
@@ -14,7 +15,6 @@ try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
-
 
 import multiparser.parsing.file as mp_file_parser
 import multiparser.parsing.tail as mp_tail_parser
@@ -34,12 +34,14 @@ class MooseRun(WrappedRun):
             name="moose_simulation",
         )
         run.launch(...)
+
+    NOTE: The connector currently does not support running MOOSE on Windows.
     """
 
     _patterns: dict[str, typing.Pattern] = {
         "time_step": re.compile(r"Time Step.*"),
         "converged": re.compile(r"\s*Solve Converged!\s*"),
-        "non_converged": re.compile(r"\s*Solve Did NOT Converge!\s*"),
+        "non_converged": re.compile(r"\s*Solve Did NOT Converge\s*"),
         "terminated": re.compile(
             r"Terminator '.+' is causing the execution to terminate."
         ),
@@ -83,6 +85,7 @@ class MooseRun(WrappedRun):
         """
         self.moose_application_path: pydantic.FilePath = None
         self.moose_file_path: pydantic.FilePath = None
+        self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.track_vector_postprocessors: bool = None
         self.track_vector_positions: bool = None
@@ -92,6 +95,7 @@ class MooseRun(WrappedRun):
         self.mpiexec_env_vars: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
+        self._file_base: str | None = None
         self._results_prefix: str = None
         self._time = time.time()
         # This represents the step number and time of the step, ie when MOOSE says 'Time Step X, time = Y'
@@ -112,7 +116,53 @@ class MooseRun(WrappedRun):
             server_profile=server_profile,
         )
 
-    def _moose_input_parser(self, input_file: pathlib.Path):
+    def _find_results_dir(
+        self,
+    ) -> tuple[pathlib.Path, str]:
+        """Find the directory and file prefix which results from the MOOSE file will be stored with.
+
+        Should account for the following cases:
+            - No `file_base` provided - output to input file parent, file prefix is input file stem
+            - Absolute `file_base` - set this as the output dir and prefix
+            - Relative `file_base` - put files relative to working_dir
+
+        Returns
+        -------
+        pathlib.Path
+            The path to the output directory where results will be generated
+        str
+            The file prefix which results will be generated with
+
+        """
+        workdir = self.workdir_path if self.workdir_path else pathlib.Path.cwd()
+
+        if not self._file_base:
+            # Uses directory containing input file, with moose file name stem as prefix
+            return self.moose_file_path.parent, self.moose_file_path.stem
+
+        # Try splitting on final slash
+        split = self._file_base.rsplit("/", maxsplit=1)
+        # If not split, no slashes, so only contains file prefix
+        # It then puts things in the *working directory*, not input file parent
+        if len(split) < 2:
+            return (
+                workdir,
+                split[0],
+            )
+
+        dir_path, results_prefix = split
+
+        # Check if absolute path
+        if dir_path.startswith("/"):
+            if self.workdir_path:
+                print(
+                    "Warning: Absolute file path detected in MOOSE input file - this location takes precedence over provided workdir_path."
+                )
+            return pathlib.Path(dir_path), results_prefix
+        # Otherwise, relative path, should be relative to working dir
+        return workdir.joinpath(dir_path).resolve(), results_prefix
+
+    def _moose_input_parser(self, input_file: pathlib.Path) -> dict[str, typing.Any]:
         """Parse MOOSE input file, and create a dictionary of metadata with dot notation representing indentation of keys.
 
         Parameters
@@ -120,16 +170,15 @@ class MooseRun(WrappedRun):
         input_file: pathlib.Path
             The path to the MOOSE input file
 
-        Raises
-        ------
-        KeyError
-            Raised if there is no 'file_base' parameter in the MOOSE file Output section, since the connector requires this to find output files.
+        Returns
+        -------
+        dict[str, typing.Any]
+            The MOOSE input file as a dictionary of metadata
 
         """
         input_metadata = {}
-        prefix = input_file.name.split(".")[0]
         # Will make a list of keys for each value to create a nested dict
-        keys = [prefix]
+        keys = []
 
         with open(input_file, "r") as file:
             for line in file:
@@ -163,31 +212,35 @@ class MooseRun(WrappedRun):
                     reduce(lambda d, key: d.setdefault(key, {}), keys, input_metadata)[
                         match.group(1)
                     ] = val
+        return input_metadata
 
-        self.update_metadata(input_metadata)
+    def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
+        """Extract useful information from the MOOSE input file metadata.
 
-        # Try to retrieve some useful things
-        file_base = input_metadata[prefix].get("Outputs", {}).get("file_base", None)
-        if not file_base:
-            raise KeyError(
-                "Could not find file_base in your MOOSE file.\n"
-                "Please add 'file_base' to your Outputs section, in the form <results directory path>/<results file prefix>."
-            )
-        _out_dir_path, self._results_prefix = file_base.rsplit("/", 1)
-        self._output_dir_path = pathlib.Path(_out_dir_path)
+        Parameters
+        ----------
+        input_metadata: dict[str, typing.Any]
+            The metadata from the MOOSE input file
 
-        if not input_metadata[prefix].get("Executioner", None):
+        """
+        # Find the location to output files
+        self._file_base = input_metadata.get("Outputs", {}).get("file_base", None)
+        self._output_dir_path, self._results_prefix = self._find_results_dir()
+
+        if not input_metadata.get("Executioner", None):
             print(
                 "No Executioner block detected in your MOOSE input file - falling back to log times and steps."
             )
 
-        elif _dt := input_metadata[prefix]["Executioner"].get("dt", None):
+        elif _dt := input_metadata["Executioner"].get("dt", None):
             try:
                 self._dt = float(_dt)
             except ValueError:
                 print(
                     "WARNING: Could not interpret Executioner.dt as a number, falling back to log times and steps. To correct this, make sure 'dt' is a number in your MOOSE input file."
                 )
+
+        self.update_metadata({self.moose_file_path.stem: input_metadata})
 
     @mp_file_parser.file_parser
     def _moose_header_parser(
@@ -261,7 +314,11 @@ class MooseRun(WrappedRun):
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).name
         vector_name, serial_num = file_name.replace(
-            f"{self._results_prefix}_", ""
+            f"{self._results_prefix}_"
+            if self._file_base
+            else f"{self._results_prefix}_csv_",
+            "",
+            1,
         ).rsplit("_", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
@@ -410,18 +467,27 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern=" Solve Did NOT Converge!",
+            pattern=" Solve Did NOT Converge",
             notification="email",
         )
+        if self.workdir_path:
+            # Ensure workdir path exists
+            self.workdir_path.mkdir(parents=True, exist_ok=True)
+
+            # If not cwd, create copy of input file into this path
+            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
+            if self.moose_file_path.resolve() != moose_file_copy.resolve():
+                shutil.copy(
+                    self.moose_file_path,
+                    moose_file_copy,
+                )
+                self.moose_file_path = moose_file_copy
 
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or str(self.moose_file_path) in self.upload_files
+            self.upload_files is None or self.moose_file_path.name in self.upload_files
         ):
             self.save_file(self.moose_file_path, category="input")
-
-        # Parse the MOOSE input file
-        self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
         # Save the MOOSE Makefile
         if (
@@ -434,23 +500,31 @@ class MooseRun(WrappedRun):
                 category="input",
             )
 
+        # Parse the MOOSE input file
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
+
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
+
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
         if self.run_in_parallel:
             command += ["mpiexec", "-n", str(self.num_processors)]
             command += format_command_env_vars(self.mpiexec_env_vars)
         command += [
-            str(self.moose_application_path),
+            str(self.moose_application_path.absolute()),
             "-i",
-            str(self.moose_file_path),
+            str(self.moose_file_path.absolute()),
             "--color",
             "off",
         ]
         command += format_command_env_vars(self.moose_env_vars)
+
         self.add_process(
             "moose_simulation",
             *command,
             completion_trigger=self._trigger,
+            cwd=self.workdir_path,
         )
 
     def _during_simulation(self):
@@ -463,7 +537,11 @@ class MooseRun(WrappedRun):
         # Read the initial information within the log file when it is first created, to parse the header information
         self.file_monitor.track(
             path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.txt"
+                    if self._file_base
+                    else f"{self._results_prefix}_console.txt"
+                )
             ),
             callback=lambda header_data, metadata: self.update_metadata(
                 {**header_data, **metadata}
@@ -474,7 +552,11 @@ class MooseRun(WrappedRun):
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
             path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.txt"
+                    if self._file_base
+                    else f"{self._results_prefix}_console.txt"
+                )
             ),
             callback=self._per_event_callback,
             tracked_values=list(self._patterns.values()),
@@ -483,7 +565,11 @@ class MooseRun(WrappedRun):
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
             path_glob_exprs=str(
-                self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+                self._output_dir_path.joinpath(
+                    f"{self._results_prefix}.csv"
+                    if self._file_base
+                    else f"{self._results_prefix}_csv.csv"
+                )
             ),
             parser_func=mp_tail_parser.record_csv,
             callback=self._per_metric_callback,
@@ -495,7 +581,11 @@ class MooseRun(WrappedRun):
         if self.track_vector_postprocessors:
             self.file_monitor.track(
                 path_glob_exprs=str(
-                    self._output_dir_path.joinpath(f"{self._results_prefix}_*.csv")
+                    self._output_dir_path.joinpath(
+                        f"{self._results_prefix}_*.csv"
+                        if self._file_base
+                        else f"{self._results_prefix}_csv_*.csv"
+                    )
                 ),
                 parser_func=self._vector_postprocessor_parser,
                 callback=self._per_metric_callback,
@@ -508,7 +598,9 @@ class MooseRun(WrappedRun):
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
             files_to_upload = (
-                self._output_dir_path.joinpath(file) for file in self.upload_files
+                self._output_dir_path.joinpath(file)
+                for file in self.upload_files
+                if file != self.moose_file_path.name
             )
 
         for file in files_to_upload:
@@ -524,6 +616,7 @@ class MooseRun(WrappedRun):
         self,
         moose_application_path: pydantic.FilePath,
         moose_file_path: pydantic.FilePath,
+        workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
         track_vector_positions: bool = False,
@@ -540,10 +633,15 @@ class MooseRun(WrappedRun):
             Path to the MOOSE application file
         moose_file_path : pydantic.FilePath
             Path to the MOOSE configuration file
+        workdir_path : str | pathlib.Path | None, optional
+            Path to a directory which you would like MOOSE to run in, by default None
+            This is where MOOSE will generate the results from the simulation
+            If a directory does not already exist at this path, it will be created
+            Uses the current working directory by default.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
-            and/or specify the input file path as provided as input to `moose_file_path`.
+            and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
@@ -571,6 +669,7 @@ class MooseRun(WrappedRun):
 
         self.moose_application_path = moose_application_path
         self.moose_file_path = moose_file_path
+        self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
         self.track_vector_positions = track_vector_positions
@@ -586,6 +685,7 @@ class MooseRun(WrappedRun):
     def load(
         self,
         moose_file_path: pydantic.FilePath,
+        results_dir: pydantic.DirectoryPath | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
         track_vector_positions: bool = False,
@@ -596,10 +696,13 @@ class MooseRun(WrappedRun):
         ----------
         moose_file_path : pydantic.FilePath
             Path to the MOOSE configuration file
+        results_dir : pydantic.DirectoryPath | None, optional
+            A path to a directory containing MOOSE simulation results to upload
+            By default, will use the location specified in the MOOSE file, or fallback to current working directory if file_base not specified.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
-            and/or specify the input file path as provided as input to `moose_file_path`.
+            and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
@@ -611,7 +714,7 @@ class MooseRun(WrappedRun):
         ValueError
             Raised if conflicting values of track_vector_positions and track_vector_postprocessors are found.
         FileNotFoundError
-            Raised if no results directory found at path specified by input file.
+            Raised if no results directory is found at expected location
 
         """
         if track_vector_positions and not track_vector_postprocessors:
@@ -626,21 +729,35 @@ class MooseRun(WrappedRun):
         self._loading_historic_run = True
 
         # Save the MOOSE file for this run to the Simvue server
-        if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path in self.upload_files
-        ):
+        if self.upload_files is None or self.moose_file_path.name in self.upload_files:
             self.save_file(self.moose_file_path, category="input")
 
         # Parse the MOOSE input file
-        self._moose_input_parser(pathlib.Path(self.moose_file_path))
+        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
 
-        # Check output dir path exists
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
+
+        if results_dir:
+            if (
+                self._file_base
+                and results_dir.resolve() != self._output_dir_path.resolve()
+            ):
+                print(
+                    f"Warning: File base specified in input file, '{self._file_base}', conflicts with user provided results_dir path. The path in the MOOSE input file will be ignored."
+                )
+            self._output_dir_path = results_dir
+
         if not self._output_dir_path.exists():
             raise FileNotFoundError(
-                f"Could not find results at path specified in input file - '{self._output_dir_path}'."
+                f"No results directory found at '{self._output_dir_path}'!"
             )
 
-        log_path = self._output_dir_path.joinpath(f"{self._results_prefix}.txt")
+        log_path = self._output_dir_path.joinpath(
+            f"{self._results_prefix}.txt"
+            if self._file_base
+            else f"{self._results_prefix}_console.txt"
+        )
         if log_path.exists():
             # Pass into header callback to extract metadata
             _, metadata = self._moose_header_parser(input_file=str(log_path))
@@ -659,7 +776,11 @@ class MooseRun(WrappedRun):
                         break
 
         # Extract metrics CSV file
-        csv_path = self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+        csv_path = (
+            self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
+            if self._file_base
+            else self._output_dir_path.joinpath(f"{self._results_prefix}_csv.csv")
+        )
         if csv_path.exists():
             with open(csv_path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
@@ -668,7 +789,11 @@ class MooseRun(WrappedRun):
                     self._per_metric_callback(_data, {})
 
         if self.track_vector_postprocessors:
-            csv_paths = self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
+            csv_paths = (
+                self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
+                if self._file_base
+                else self._output_dir_path.glob(f"{self._results_prefix}_csv_*.csv")
+            )
             for path in csv_paths:
                 if path == self._output_dir_path.joinpath(
                     f"{self._results_prefix}_*_time.csv"
