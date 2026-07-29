@@ -37,7 +37,7 @@ def run_moose(
             # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
             run.create_metric_threshold_alert(
                 name="avg_temp_above_500",
-                metric="average_temerature",
+                metric="average_temperature",
                 rule="is above",
                 threshold=500.0,
                 frequency=1,
@@ -180,3 +180,186 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         # Check results uploaded as output
         client.get_artifacts_as_files(run_id, "output", temp_dir)
         assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
+
+
+@pytest.mark.parametrize(
+    "file_base",
+    (None, "relative", "absolute"),
+)
+@pytest.mark.parametrize(
+    "workdir_path",
+    (True, False),
+    ids=("workdir_path", "default_workdir"),
+)
+def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
+    try:
+        subprocess.run(MOOSE_APP_PATH)
+    except FileNotFoundError:
+        pytest.skip(
+            "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
+        )
+
+    original_cwd = pathlib.Path.cwd()
+
+    with tempfile.TemporaryDirectory() as tempd:
+        # Replace file base
+        text = (
+            pathlib.Path(__file__)
+            .parent.joinpath("example_data", "thermal_bar.i")
+            .read_text()
+        )
+        if file_base == "absolute":
+            text = text.replace(
+                "  file_base = test_results/simvue_thermal",
+                f"  file_base = {pathlib.Path(tempd).joinpath('absolute', 'simvue_thermal').absolute()}",
+            )
+        elif not file_base:
+            text = text.replace(
+                "  file_base = test_results/simvue_thermal",
+                "  ",
+            )
+
+        # Create new copy of input file
+        moose_file_path = pathlib.Path(tempd).joinpath("thermal_bar.i")
+        moose_file_path.write_text(text)
+
+        # Initialise the MooseRun class as a context manager
+        with MooseRun() as run:
+            # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
+            run.init(
+                name=f"fds-integration-file_base-{file_base}-working_dir-{str(workdir_path)}-{str(uuid.uuid4())}",
+                description="An example of using the MooseRun Connector to track a MOOSE simulation.",
+                folder="/test-moose",
+                tags=["moose", "thermal", "diffusion"],
+                retention_period="1 hour",
+            )
+
+            run_id = run.id
+
+            # Change current working directory
+            monkeypatch.chdir(tempd)
+
+            run.launch(
+                moose_application_path=MOOSE_APP_PATH,
+                moose_file_path=moose_file_path,
+                workdir_path=pathlib.Path(tempd).joinpath("my_results")
+                if workdir_path
+                else None,
+                # You can optionally choose to track VectorPostProcessor outputs too:
+                track_vector_postprocessors=True,
+            )
+
+        # Check results files exist in expected location
+        if file_base == "absolute":
+            # Should be in tempd with prefix simvue_absolute
+            assert (
+                pathlib.Path(tempd).joinpath("absolute", "simvue_thermal.txt").exists()
+            )
+        elif file_base == "relative":
+            # Should be in folder test_results, relative to working dir if specified, with simvue_thermal prefix
+            if workdir_path:
+                assert (
+                    pathlib.Path(tempd)
+                    .joinpath("my_results", "test_results", "simvue_thermal.txt")
+                    .exists()
+                )
+            else:
+                assert (
+                    pathlib.Path(tempd)
+                    .joinpath("test_results", "simvue_thermal.txt")
+                    .exists()
+                )
+        else:
+            # Files given default names, starting with name of input file
+            if workdir_path:
+                assert (
+                    pathlib.Path(tempd)
+                    .joinpath("my_results", "thermal_bar_console.txt")
+                    .exists()
+                )
+            else:
+                assert pathlib.Path(tempd).joinpath("thermal_bar_console.txt").exists()
+
+    # Change current working directory back to normal
+    monkeypatch.chdir(original_cwd)
+
+    # Check data collected
+    client = simvue.Client()
+    run_data = client.get_run(run_id)
+    events = [event["message"] for event in client.get_events(run_id)]
+
+    # Check run description and tags from init have been added
+    assert (
+        run_data.description
+        == "An example of using the MooseRun Connector to track a MOOSE simulation."
+    )
+    assert run_data.tags == ["moose", "thermal", "diffusion"]
+
+    # Check metadata from MOOSE log header has been uploaded
+    assert run_data.metadata["moose"]["executioner"] == "Transient"
+
+    assert run_data.metadata["moose"]["num_processors"] == "1"
+
+    # Check metadata from MOOSE input file has been uploaded
+    assert (
+        run_data.metadata["thermal_bar"]["Postprocessors"]["average_temperature"][
+            "type"
+        ]
+        == "ElementAverageValue"
+    )
+    assert run_data.metadata["thermal_bar"]["BCs"]["hot"]["value"] == 1000
+
+    # Check events uploaded from log
+    assert "Time Step 1, time = 2, dt = 2" in events
+    assert "Time Step 15, time = 30, dt = 2" in events
+
+    # Check metrics uploaded from PostProcessor CSV
+    metrics = dict(run_data.metrics)
+    assert metrics["average_temperature"]["max"] > 498
+
+    # Check time and step data is correct
+    sample_metric = client.get_metric_values(
+        metric_names=["average_temperature"],
+        xaxis="time",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
+    assert list(sample_metric.index.levels[0]) == list(range(0, 32, 2))
+    sample_metric = client.get_metric_values(
+        metric_names=["average_temperature"],
+        xaxis="step",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
+    assert list(sample_metric.index.levels[0]) == list(range(0, 16, 1))
+
+    # Check metrics uploaded from VectorPostProcessor CSV
+    assert metrics["temperature_along_bar.T.1"]["max"] > 498
+
+    # Check time and step data is correct - starts from first step, since file PostProcessor file 0000 is blank
+    sample_metric = client.get_metric_values(
+        metric_names=["temperature_along_bar.T.0"],
+        xaxis="time",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
+    assert list(sample_metric.index.levels[0]) == list(range(2, 32, 2))
+    sample_metric = client.get_metric_values(
+        metric_names=["temperature_along_bar.T.2"],
+        xaxis="step",
+        output_format="dataframe",
+        run_ids=[run_id],
+    )
+    assert list(sample_metric.index.levels[0]) == list(range(1, 16, 1))
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input file uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("thermal_bar.i").exists()
+
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        if file_base:
+            assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
+        else:
+            assert pathlib.Path(temp_dir).joinpath("thermal_bar_exodus.e").exists()
