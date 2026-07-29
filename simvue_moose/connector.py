@@ -562,6 +562,9 @@ class MooseRun(WrappedRun):
         ]
         command += format_command_env_vars(self.moose_env_vars)
 
+        # Delete .out and .err files, if they exist, so we don't upload old events
+        pathlib.Path(f"{self.name}_moose_simulation.out").unlink(missing_ok=True)
+
         self.add_process(
             "moose_simulation",
             *command,
@@ -578,13 +581,7 @@ class MooseRun(WrappedRun):
 
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            path_glob_exprs=str(
-                self._output_dir_path.joinpath(
-                    f"{self._results_prefix}.txt"
-                    if self._file_base
-                    else f"{self._results_prefix}_console.txt"
-                )
-            ),
+            path_glob_exprs=f"{self.name}_moose_simulation.out",
             parser_func=mp_tail_parser.log_parser(self._log_parser),
             # tracked_values=list(self._patterns.values()),
             # labels=list(self._patterns.keys()),
