@@ -315,15 +315,14 @@ class MooseRun(WrappedRun):
                 if not match:
                     continue
 
-                if name in ("time_step", "converged", "non_converged", "terminated"):
-                    self.log_event(line.rstrip().title())
-
                 if name == "time_step":
+                    self.log_event(line.rstrip())
                     self._time = time.time()
                     self._step_num = int(match.group(1))
                     self._step_time = float(match.group(2))
 
                 elif name in ("converged", "non_converged"):
+                    self.log_event(line.rstrip().title())
                     if not self._loading_historic_run:
                         self.log_event(
                             f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
@@ -350,6 +349,7 @@ class MooseRun(WrappedRun):
                     self._linear += 1
 
                 elif name == "terminated":
+                    self.log_event(line.rstrip())
                     self._terminated = True
 
                     terminator = match.group(1)
@@ -509,7 +509,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern="Solve Did Not Converge",
+            pattern="Solve did not converge",
             notification="email",
         )
         if self.workdir_path:
