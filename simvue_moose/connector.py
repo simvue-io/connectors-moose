@@ -361,9 +361,9 @@ class MooseRun(WrappedRun):
 
         if "id" in data.columns:
             _id = data.pop("id")
-            if len(varying_dims) < 1 and _id.nunique() > 0:
+            if len(varying_dims) != 1 and _id.nunique() > 0:
                 # Fallback to using ID as axis if no coord found
-                varying_dims.append(_id)
+                varying_dims = [_id]
 
         if len(varying_dims) > 1:
             print(
@@ -375,6 +375,12 @@ class MooseRun(WrappedRun):
                     str(
                         self._output_dir_path.joinpath(
                             f"{self._results_prefix}_{vector_name}_[0-9]*.csv"
+                        )
+                    )
+                    if self._file_base
+                    else str(
+                        self._output_dir_path.joinpath(
+                            f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
                         )
                     )
                 )
@@ -817,10 +823,11 @@ class MooseRun(WrappedRun):
             )
             for path in csv_paths:
                 if path.match(f"{self._results_prefix}_*_time.csv") or any(
-                    (
-                        path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
-                        for vector_name in self._unsupported_vectors
+                    path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
+                    or path.match(
+                        f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
                     )
+                    for vector_name in self._unsupported_vectors
                 ):
                     continue
                 _, data = self._vector_postprocessor_parser(input_file=str(path))
