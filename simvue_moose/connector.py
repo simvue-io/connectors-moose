@@ -434,7 +434,7 @@ class MooseRun(WrappedRun):
             _id = data.pop("id")
             if len(varying_dims) < 1 and _id.nunique() > 0:
                 # Fallback to using ID as axis if no coord found
-                varying_dims.append(_id)
+                varying_dims = [_id]
 
         if len(varying_dims) > 1:
             print(
@@ -446,6 +446,12 @@ class MooseRun(WrappedRun):
                     str(
                         self._output_dir_path.joinpath(
                             f"{self._results_prefix}_{vector_name}_[0-9]*.csv"
+                        )
+                    )
+                    if self._file_base
+                    else str(
+                        self._output_dir_path.joinpath(
+                            f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
                         )
                     )
                 )
@@ -668,6 +674,7 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
+            Note that this will only currently work for 1D slices, which vary along one dimension.
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any environment variables to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
@@ -786,10 +793,11 @@ class MooseRun(WrappedRun):
             )
             for path in csv_paths:
                 if path.match(f"{self._results_prefix}_*_time.csv") or any(
-                    (
-                        path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
-                        for vector_name in self._unsupported_vectors
+                    path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
+                    or path.match(
+                        f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
                     )
+                    for vector_name in self._unsupported_vectors
                 ):
                     continue
                 _, data = self._vector_postprocessor_parser(input_file=str(path))
