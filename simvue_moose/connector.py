@@ -361,7 +361,7 @@ class MooseRun(WrappedRun):
 
         if "id" in data.columns:
             _id = data.pop("id")
-            if len(varying_dims) != 1 and _id.nunique() > 0:
+            if len(varying_dims) < 1 and _id.nunique() > 0:
                 # Fallback to using ID as axis if no coord found
                 varying_dims = [_id]
 
@@ -696,6 +696,7 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
+            Note that this will only currently work for 1D slices, which vary along one dimension.
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any environment variables to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
