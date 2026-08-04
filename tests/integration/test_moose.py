@@ -253,20 +253,20 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
         if file_base == "absolute":
             # Should be in tempd with prefix simvue_absolute
             assert (
-                pathlib.Path(tempd).joinpath("absolute", "simvue_thermal.txt").exists()
+                pathlib.Path(tempd).joinpath("absolute", "simvue_thermal.csv").exists()
             )
         elif file_base == "relative":
             # Should be in folder test_results, relative to working dir if specified, with simvue_thermal prefix
             if workdir_path:
                 assert (
                     pathlib.Path(tempd)
-                    .joinpath("my_results", "test_results", "simvue_thermal.txt")
+                    .joinpath("my_results", "test_results", "simvue_thermal.csv")
                     .exists()
                 )
             else:
                 assert (
                     pathlib.Path(tempd)
-                    .joinpath("test_results", "simvue_thermal.txt")
+                    .joinpath("test_results", "simvue_thermal.csv")
                     .exists()
                 )
         else:
