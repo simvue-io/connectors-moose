@@ -46,7 +46,7 @@ with MooseRun() as run:
     run.load(
         # Provide path to input file, making sure it has a file base pointing to your results directory
         moose_file_path=pathlib.Path(__file__).parent.joinpath("thermal_bar.i"),
-        results_dir=pathlib.Path(__file__).parent.joinpath("results"),
+        results_dir=pathlib.Path(__file__).parent.joinpath("test"),
         # You can optionally choose to track VectorPostProcessor outputs too:
         track_vector_postprocessors=True,
         # Optionally choose which files to upload, by default uploads all results

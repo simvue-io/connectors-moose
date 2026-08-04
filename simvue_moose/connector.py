@@ -311,7 +311,12 @@ class MooseRun(WrappedRun):
                 self.update_metadata(self._header_metadata)
 
                 # Check if static solve, in case not found in input file
-                if self._header_metadata.get("executioner", "").lower() == "steady":
+                if (
+                    self._header_metadata.get("moose", {})
+                    .get("executioner", "")
+                    .lower()
+                    == "steady"
+                ):
                     self._steady = True
                 continue
 
@@ -337,7 +342,7 @@ class MooseRun(WrappedRun):
 
                 elif name in ("converged", "non_converged"):
                     self.log_event(line.rstrip().title())
-                    if not self._loading_historic_run:
+                    if not self._loading_historic_run and not self._steady:
                         self.log_event(
                             f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
                         )
@@ -362,17 +367,15 @@ class MooseRun(WrappedRun):
                             f"Beginning Nonlinear Iteration {match.group(1)}"
                         )
                         self.log_metrics(
-                            {"nonlinear_iteration_residual": float(match.group(2))},
+                            {"nonlinear_iteration_residuals": float(match.group(2))},
                             step=self._nonlinear,
-                            time=self._nonlinear,
                         )
                 elif name == "linear":
                     self._linear += 1
                     if self._steady:
                         self.log_metrics(
-                            {"linear_iteration_residual": float(match.group(2))},
+                            {"linear_iteration_residuals": float(match.group(2))},
                             step=self._linear,
-                            time=self._linear,
                         )
 
                 elif name == "terminated":
