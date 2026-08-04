@@ -9,6 +9,8 @@ readme = "README.md"
 requires-python = ">=3.10,<3.15"
 dependencies = [
     "simvue-connector (>=1.1.1)",
+    "pandas (>=2.2.3)",
+    "numpy (>=2.0.0,<3.0.0)",
     ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
