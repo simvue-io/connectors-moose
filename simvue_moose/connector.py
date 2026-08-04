@@ -49,8 +49,8 @@ class MooseRun(WrappedRun):
         "terminated": re.compile(
             r"Terminator '(.+)' is causing the execution to terminate."
         ),
-        "nonlinear": re.compile(r"\s*(\d+) Nonlinear \|R\|"),
-        "linear": re.compile(r"\s*(\d+) Linear \|R\|"),
+        "nonlinear": re.compile(r"\s*(\d+) Nonlinear \|R\| = ([\deE\.\+\-]+)"),
+        "linear": re.compile(r"\s*(\d+) Linear \|R\| = ([\deE\.\+\-]+)"),
     }
 
     def __init__(
@@ -108,6 +108,7 @@ class MooseRun(WrappedRun):
         self._nonlinear = 0
         self._linear = 0
         self._dt = None
+        self._steady = False
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
@@ -233,18 +234,21 @@ class MooseRun(WrappedRun):
         self._file_base = input_metadata.get("Outputs", {}).get("file_base", None)
         self._output_dir_path, self._results_prefix = self._find_results_dir()
 
-        if not input_metadata.get("Executioner", None):
+        if _executioner_metadata := input_metadata.get("Executioner", None):
+            if _dt := _executioner_metadata.get("dt", None):
+                try:
+                    self._dt = float(_dt)
+                except ValueError:
+                    print(
+                        "WARNING: Could not interpret Executioner.dt as a number, falling back to log times and steps. To correct this, make sure 'dt' is a number in your MOOSE input file."
+                    )
+
+            if _executioner_metadata.get("type", "").lower() == "steady":
+                self._steady = True
+        else:
             print(
                 "No Executioner block detected in your MOOSE input file - falling back to log times and steps."
             )
-
-        elif _dt := input_metadata["Executioner"].get("dt", None):
-            try:
-                self._dt = float(_dt)
-            except ValueError:
-                print(
-                    "WARNING: Could not interpret Executioner.dt as a number, falling back to log times and steps. To correct this, make sure 'dt' is a number in your MOOSE input file."
-                )
 
         self.update_metadata({self.moose_file_path.stem: input_metadata})
 
@@ -299,12 +303,18 @@ class MooseRun(WrappedRun):
             if "Framework Information:" in line:
                 self._framework_info_header = True
                 continue
+
             # Then check if we are in final line of this header
             if "MOOSE Preconditioner:" in line:
                 self._framework_header_parser(line)
                 self._framework_info_header = False
                 self.update_metadata(self._header_metadata)
+
+                # Check if static solve, in case not found in input file
+                if self._header_metadata.get("executioner", "").lower() == "steady":
+                    self._steady = True
                 continue
+
             if self._framework_info_header:
                 self._framework_header_parser(line)
                 continue
@@ -321,6 +331,10 @@ class MooseRun(WrappedRun):
                     self._step_num = int(match.group(1))
                     self._step_time = float(match.group(2))
 
+                    # Reset counters
+                    self._linear = 0
+                    self._nonlinear = 0
+
                 elif name in ("converged", "non_converged"):
                     self.log_event(line.rstrip().title())
                     if not self._loading_historic_run:
@@ -330,23 +344,36 @@ class MooseRun(WrappedRun):
                     self.log_event(f" Total Nonlinear Iterations: {self._nonlinear}.")
                     self.log_event(f" Total Linear Iterations: {self._linear}.")
 
-                    self.log_metrics(
-                        {
-                            "total_linear_iterations": self._linear,
-                            "total_nonlinear_iterations": self._nonlinear,
-                        },
-                        self._step_num,
-                        self._step_time,
-                    )
-
-                    self._linear = 0
-                    self._nonlinear = 0
+                    if not self._steady:
+                        self.log_metrics(
+                            {
+                                "total_linear_iterations": self._linear,
+                                "total_nonlinear_iterations": self._nonlinear,
+                            },
+                            self._step_num,
+                            self._step_time,
+                        )
 
                 # Keep track of total number of linear and nonlinear iterations in the solve
                 elif name == "nonlinear":
                     self._nonlinear += 1
+                    if self._steady:
+                        self.log_event(
+                            f"Beginning Nonlinear Iteration {match.group(1)}"
+                        )
+                        self.log_metrics(
+                            {"nonlinear_iteration_residual": float(match.group(2))},
+                            step=self._nonlinear,
+                            time=self._nonlinear,
+                        )
                 elif name == "linear":
                     self._linear += 1
+                    if self._steady:
+                        self.log_metrics(
+                            {"linear_iteration_residual": float(match.group(2))},
+                            step=self._linear,
+                            time=self._linear,
+                        )
 
                 elif name == "terminated":
                     self.log_event(line.rstrip())
@@ -703,6 +730,7 @@ class MooseRun(WrappedRun):
         self,
         moose_file_path: pydantic.FilePath,
         results_dir: pydantic.DirectoryPath | None = None,
+        log_path: pydantic.FilePath | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
     ):
@@ -715,6 +743,10 @@ class MooseRun(WrappedRun):
         results_dir : pydantic.DirectoryPath | None, optional
             A path to a directory containing MOOSE simulation results to upload
             By default, will use the location specified in the MOOSE file, or fallback to current working directory if file_base not specified.
+        log_path : pydantic.FilePath | None, optional
+            The path to a file containing MOOSE console output to parse for this run
+            By default, will try to find a `.out` or `.txt` file in the results directory.
+            Will raise an exception if multiple files are found and a log_path is not provided.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
@@ -727,6 +759,8 @@ class MooseRun(WrappedRun):
         ------
         FileNotFoundError
             Raised if no results directory is found at expected location
+        RuntimeError
+            Found if more than one potential console log file is found, and the user did not specify the one to use.
 
         """
         self.moose_file_path = moose_file_path
@@ -759,12 +793,17 @@ class MooseRun(WrappedRun):
                 f"No results directory found at '{self._output_dir_path}'!"
             )
 
-        log_path = self._output_dir_path.joinpath(
-            f"{self._results_prefix}.txt"
-            if self._file_base
-            else f"{self._results_prefix}_console.txt"
-        )
-        if log_path.exists():
+        if not log_path:
+            candidate_paths = list(
+                self._output_dir_path.glob(f"{self._results_prefix}*.txt")
+            ) + list(self._output_dir_path.glob("*_moose_simulation.out"))
+            if len(candidate_paths) > 1:
+                raise RuntimeError(
+                    "More than one potential console log file found in results directory. Please specify the one to use as the `log_path` parameter to the connector."
+                )
+            log_path = candidate_paths[0] if candidate_paths else None
+
+        if log_path and log_path.exists():
             # Parse line by line, matching regex patterns, upload as Events if found
             with open(log_path) as file:
                 file_lines = file.readlines()
