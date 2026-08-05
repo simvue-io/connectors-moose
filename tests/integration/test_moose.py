@@ -263,7 +263,7 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
 
         # Check results uploaded as output
         client.get_artifacts_as_files(run_id, "output", temp_dir)
-        assert pathlib.Path(temp_dir).joinpath("diffusion_out.csv").exists()
+        assert pathlib.Path(temp_dir).joinpath("diffusion_csv.csv").exists()
 
 
 @pytest.mark.parametrize(
