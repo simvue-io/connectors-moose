@@ -1,0 +1,299 @@
+Framework Information:
+MOOSE Version:           git commit e1602b1e72 on 2026-05-29
+LibMesh Version:         aeab0b93c188afdac422e968cacb12bc18806bc1
+PETSc Version:           3.25.1
+SLEPc Version:           3.25.0
+Libtorch Version:        2.11.0
+MFEM Version:            4.9.1
+Current Time:            Wed Aug  5 09:32:48 2026
+Executable Timestamp:    Fri May 29 09:44:39 2026
+
+Input File(s):
+  /temp/diffusion.i
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END 
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh: 
+  Parallel Type:           replicated
+  Mesh Dimension:          2
+  Spatial Dimension:       2
+  Nodes:                   121
+  Elems:                   50
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                620
+  Num Local DOFs:          620
+  Variables:               "face_u" "u" "grad_u" 
+  Finite Element Types:    "SIDE_HIERARCHIC" "L2_LAGRANGE" "L2_LAGRANGE_VEC" 
+  Approximation Orders:    "FIRST" "FIRST" "FIRST" 
+
+Execution Information:
+  Executioner:             Steady
+  Solver Mode:             NEWTON 
+  MOOSE Preconditioner:    SMP 
+
+
+Postprocessor Values:
++----------------+----------------+----------------+----------------+----------------+----------------+
+| time           | bottom         | left           | right          | symmetric      | top            |
++----------------+----------------+----------------+----------------+----------------+----------------+
+|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |
++----------------+----------------+----------------+----------------+----------------+----------------+
+
+ 0 Nonlinear |R| = 4.472136e-01
+      0 Linear |R| = 4.472136e-01
+      1 Linear |R| = 3.652642e-01
+      2 Linear |R| = 3.117726e-01
+      3 Linear |R| = 2.405344e-01
+      4 Linear |R| = 1.935806e-01
+      5 Linear |R| = 1.772388e-01
+      6 Linear |R| = 1.622886e-01
+      7 Linear |R| = 1.424927e-01
+      8 Linear |R| = 1.256142e-01
+      9 Linear |R| = 1.179428e-01
+     10 Linear |R| = 1.063035e-01
+     11 Linear |R| = 9.129212e-02
+     12 Linear |R| = 7.767532e-02
+     13 Linear |R| = 6.655358e-02
+     14 Linear |R| = 5.848197e-02
+     15 Linear |R| = 4.979698e-02
+     16 Linear |R| = 4.353757e-02
+     17 Linear |R| = 3.724752e-02
+     18 Linear |R| = 3.269068e-02
+     19 Linear |R| = 2.917429e-02
+     20 Linear |R| = 2.667699e-02
+     21 Linear |R| = 2.209645e-02
+     22 Linear |R| = 1.920276e-02
+     23 Linear |R| = 1.551968e-02
+     24 Linear |R| = 1.320358e-02
+     25 Linear |R| = 1.175243e-02
+     26 Linear |R| = 1.065778e-02
+     27 Linear |R| = 9.549912e-03
+     28 Linear |R| = 8.580727e-03
+     29 Linear |R| = 7.398404e-03
+     30 Linear |R| = 6.471453e-03
+     31 Linear |R| = 5.857290e-03
+     32 Linear |R| = 5.150903e-03
+     33 Linear |R| = 4.550763e-03
+     34 Linear |R| = 4.034826e-03
+     35 Linear |R| = 3.641373e-03
+     36 Linear |R| = 3.263664e-03
+     37 Linear |R| = 3.008500e-03
+     38 Linear |R| = 2.692820e-03
+     39 Linear |R| = 2.443120e-03
+     40 Linear |R| = 2.227791e-03
+     41 Linear |R| = 2.021235e-03
+     42 Linear |R| = 1.838121e-03
+     43 Linear |R| = 1.639478e-03
+     44 Linear |R| = 1.462037e-03
+     45 Linear |R| = 1.310994e-03
+     46 Linear |R| = 1.137668e-03
+     47 Linear |R| = 1.000483e-03
+     48 Linear |R| = 8.555205e-04
+     49 Linear |R| = 7.570531e-04
+     50 Linear |R| = 6.733399e-04
+     51 Linear |R| = 6.092043e-04
+     52 Linear |R| = 5.380343e-04
+     53 Linear |R| = 4.758122e-04
+     54 Linear |R| = 3.989349e-04
+     55 Linear |R| = 3.473629e-04
+     56 Linear |R| = 2.969200e-04
+     57 Linear |R| = 2.611241e-04
+     58 Linear |R| = 2.296398e-04
+     59 Linear |R| = 2.062187e-04
+     60 Linear |R| = 1.827237e-04
+     61 Linear |R| = 1.657473e-04
+     62 Linear |R| = 1.501457e-04
+     63 Linear |R| = 1.362725e-04
+     64 Linear |R| = 1.227356e-04
+     65 Linear |R| = 1.109211e-04
+     66 Linear |R| = 1.000598e-04
+     67 Linear |R| = 8.983449e-05
+     68 Linear |R| = 8.100524e-05
+     69 Linear |R| = 7.341736e-05
+     70 Linear |R| = 6.697025e-05
+     71 Linear |R| = 6.205565e-05
+     72 Linear |R| = 5.763056e-05
+     73 Linear |R| = 5.461709e-05
+     74 Linear |R| = 5.082284e-05
+     75 Linear |R| = 4.689033e-05
+     76 Linear |R| = 4.263326e-05
+     77 Linear |R| = 3.832019e-05
+     78 Linear |R| = 3.384095e-05
+     79 Linear |R| = 3.047518e-05
+     80 Linear |R| = 2.709925e-05
+     81 Linear |R| = 2.417659e-05
+     82 Linear |R| = 2.120883e-05
+     83 Linear |R| = 1.873142e-05
+     84 Linear |R| = 1.655056e-05
+     85 Linear |R| = 1.437609e-05
+     86 Linear |R| = 1.254365e-05
+     87 Linear |R| = 1.077709e-05
+     88 Linear |R| = 9.362618e-06
+     89 Linear |R| = 8.456056e-06
+     90 Linear |R| = 7.635742e-06
+     91 Linear |R| = 7.137538e-06
+     92 Linear |R| = 6.507045e-06
+     93 Linear |R| = 5.892783e-06
+     94 Linear |R| = 5.245383e-06
+     95 Linear |R| = 4.644866e-06
+     96 Linear |R| = 4.126129e-06
+ 1 Nonlinear |R| = 4.126129e-06
+      0 Linear |R| = 4.126129e-06
+      1 Linear |R| = 3.740660e-06
+      2 Linear |R| = 3.434135e-06
+      3 Linear |R| = 3.182331e-06
+      4 Linear |R| = 2.919809e-06
+      5 Linear |R| = 2.691427e-06
+      6 Linear |R| = 2.499711e-06
+      7 Linear |R| = 2.339160e-06
+      8 Linear |R| = 2.184127e-06
+      9 Linear |R| = 1.995898e-06
+     10 Linear |R| = 1.859070e-06
+     11 Linear |R| = 1.729735e-06
+     12 Linear |R| = 1.564132e-06
+     13 Linear |R| = 1.408311e-06
+     14 Linear |R| = 1.209784e-06
+     15 Linear |R| = 1.078049e-06
+     16 Linear |R| = 9.572757e-07
+     17 Linear |R| = 8.718093e-07
+     18 Linear |R| = 7.905563e-07
+     19 Linear |R| = 7.147794e-07
+     20 Linear |R| = 6.520295e-07
+     21 Linear |R| = 5.688082e-07
+     22 Linear |R| = 5.069818e-07
+     23 Linear |R| = 4.561995e-07
+     24 Linear |R| = 4.094056e-07
+     25 Linear |R| = 3.806931e-07
+     26 Linear |R| = 3.426856e-07
+     27 Linear |R| = 3.174196e-07
+     28 Linear |R| = 2.881029e-07
+     29 Linear |R| = 2.653884e-07
+     30 Linear |R| = 2.424142e-07
+     31 Linear |R| = 2.236614e-07
+     32 Linear |R| = 1.991388e-07
+     33 Linear |R| = 1.811763e-07
+     34 Linear |R| = 1.657890e-07
+     35 Linear |R| = 1.498048e-07
+     36 Linear |R| = 1.376523e-07
+     37 Linear |R| = 1.276087e-07
+     38 Linear |R| = 1.185945e-07
+     39 Linear |R| = 1.108722e-07
+     40 Linear |R| = 1.036428e-07
+     41 Linear |R| = 9.534289e-08
+     42 Linear |R| = 8.898805e-08
+     43 Linear |R| = 8.215118e-08
+     44 Linear |R| = 7.448669e-08
+     45 Linear |R| = 6.777736e-08
+     46 Linear |R| = 6.048988e-08
+     47 Linear |R| = 5.453000e-08
+     48 Linear |R| = 4.682308e-08
+     49 Linear |R| = 4.202032e-08
+     50 Linear |R| = 3.755429e-08
+     51 Linear |R| = 3.418939e-08
+     52 Linear |R| = 3.057520e-08
+     53 Linear |R| = 2.836073e-08
+     54 Linear |R| = 2.672333e-08
+     55 Linear |R| = 2.483518e-08
+     56 Linear |R| = 2.345616e-08
+     57 Linear |R| = 2.198214e-08
+     58 Linear |R| = 2.041137e-08
+     59 Linear |R| = 1.887378e-08
+     60 Linear |R| = 1.732289e-08
+     61 Linear |R| = 1.592265e-08
+     62 Linear |R| = 1.474575e-08
+     63 Linear |R| = 1.375631e-08
+     64 Linear |R| = 1.292524e-08
+     65 Linear |R| = 1.208936e-08
+     66 Linear |R| = 1.123421e-08
+     67 Linear |R| = 1.051889e-08
+     68 Linear |R| = 9.874449e-09
+     69 Linear |R| = 9.113147e-09
+     70 Linear |R| = 8.454992e-09
+     71 Linear |R| = 7.910805e-09
+     72 Linear |R| = 7.342783e-09
+     73 Linear |R| = 6.604096e-09
+     74 Linear |R| = 5.845303e-09
+     75 Linear |R| = 5.215361e-09
+     76 Linear |R| = 4.744921e-09
+     77 Linear |R| = 4.435190e-09
+     78 Linear |R| = 4.062245e-09
+     79 Linear |R| = 3.788889e-09
+     80 Linear |R| = 3.470135e-09
+     81 Linear |R| = 3.201687e-09
+     82 Linear |R| = 2.916282e-09
+     83 Linear |R| = 2.589204e-09
+     84 Linear |R| = 2.340785e-09
+     85 Linear |R| = 2.119501e-09
+     86 Linear |R| = 1.944753e-09
+     87 Linear |R| = 1.792757e-09
+     88 Linear |R| = 1.679007e-09
+     89 Linear |R| = 1.550749e-09
+     90 Linear |R| = 1.438283e-09
+     91 Linear |R| = 1.349117e-09
+     92 Linear |R| = 1.233608e-09
+     93 Linear |R| = 1.140119e-09
+     94 Linear |R| = 1.048612e-09
+     95 Linear |R| = 9.729991e-10
+     96 Linear |R| = 8.917583e-10
+     97 Linear |R| = 8.287993e-10
+     98 Linear |R| = 7.551484e-10
+     99 Linear |R| = 6.884352e-10
+    100 Linear |R| = 6.320939e-10
+    101 Linear |R| = 5.785444e-10
+    102 Linear |R| = 5.365102e-10
+    103 Linear |R| = 4.852539e-10
+    104 Linear |R| = 4.469481e-10
+    105 Linear |R| = 4.122073e-10
+    106 Linear |R| = 3.721952e-10
+    107 Linear |R| = 3.199927e-10
+    108 Linear |R| = 2.838102e-10
+    109 Linear |R| = 2.589375e-10
+    110 Linear |R| = 2.371466e-10
+    111 Linear |R| = 2.196550e-10
+    112 Linear |R| = 2.042623e-10
+    113 Linear |R| = 1.923207e-10
+    114 Linear |R| = 1.823606e-10
+    115 Linear |R| = 1.711687e-10
+    116 Linear |R| = 1.599268e-10
+    117 Linear |R| = 1.498671e-10
+    118 Linear |R| = 1.402058e-10
+    119 Linear |R| = 1.289681e-10
+    120 Linear |R| = 1.173120e-10
+    121 Linear |R| = 1.074575e-10
+    122 Linear |R| = 9.945540e-11
+    123 Linear |R| = 9.311370e-11
+    124 Linear |R| = 8.717066e-11
+    125 Linear |R| = 8.296530e-11
+    126 Linear |R| = 7.832466e-11
+    127 Linear |R| = 7.313382e-11
+    128 Linear |R| = 6.811804e-11
+    129 Linear |R| = 6.339394e-11
+    130 Linear |R| = 5.864448e-11
+    131 Linear |R| = 5.489756e-11
+    132 Linear |R| = 5.148917e-11
+    133 Linear |R| = 4.650898e-11
+    134 Linear |R| = 4.267967e-11
+    135 Linear |R| = 3.809322e-11
+ 2 Nonlinear |R| = 3.809322e-11
+ Solve Converged!
+
+Outlier Variable Residual Norms:
+  grad_u: 3.254542e-11
+
+Postprocessor Values:
++----------------+----------------+----------------+----------------+----------------+----------------+
+| time           | bottom         | left           | right          | symmetric      | top            |
++----------------+----------------+----------------+----------------+----------------+----------------+
+|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |
+|   1.000000e+00 |   5.000000e-01 |  -5.110904e-13 |   1.000000e+00 |   0.000000e+00 |   5.000000e-01 |
++----------------+----------------+----------------+----------------+----------------+----------------+

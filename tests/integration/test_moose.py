@@ -97,7 +97,7 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
             "example_data", "thermal_bar.i"
         ),
         load_results_dir=pathlib.Path(__file__).parent.joinpath(
-            "example_data", "results"
+            "example_data", "thermal_bar_results"
         ),
         offline=offline,
         parallel=parallel,
@@ -180,6 +180,90 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         # Check results uploaded as output
         client.get_artifacts_as_files(run_id, "output", temp_dir)
         assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
+
+
+@pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
+@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
+@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
+def test_moose_steady(offline, parallel, load, offline_cache_setup):
+    try:
+        subprocess.run(MOOSE_APP_PATH)
+    except FileNotFoundError:
+        pytest.skip(
+            "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
+        )
+    if load:
+        if parallel:
+            pytest.skip("Parallel has no effect when loading from historic runs")
+
+    run_id = run_moose(
+        moose_file_path=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "diffusion.i"
+        ),
+        load_results_dir=pathlib.Path(__file__).parent.joinpath(
+            "example_data", "diffusion_results"
+        ),
+        offline=offline,
+        parallel=parallel,
+        load=load,
+        moose_app_path=MOOSE_APP_PATH,
+    )
+
+    client = simvue.Client()
+    run_data = client.get_run(run_id)
+    events = [event["message"] for event in client.get_events(run_id)]
+
+    # Check run description and tags from init have been added
+    assert (
+        run_data.description
+        == "An example of using the MooseRun Connector to track a MOOSE simulation."
+    )
+    assert run_data.tags == ["moose", "thermal", "diffusion"]
+
+    # Check alert has been added
+    assert "avg_temp_above_500" in [
+        alert["name"] for alert in run_data.get_alert_details()
+    ]
+
+    # Check metadata from MOOSE log header has been uploaded
+    assert run_data.metadata["moose"]["executioner"] == "Steady"
+
+    if parallel:
+        assert run_data.metadata["moose"]["num_processors"] == "2"
+    else:
+        assert run_data.metadata["moose"]["num_processors"] == "1"
+
+    # Check metadata from MOOSE input file has been uploaded
+    assert (
+        run_data.metadata["diffusion"]["Postprocessors"]["left"]["type"]
+        == "SideAverageValue"
+    )
+    assert run_data.metadata["diffusion"]["BCs"]["right"]["functor"] == "1"
+
+    # Check events uploaded from log
+    assert "Beginning Nonlinear Iteration 1" in events
+    assert " Solve Converged!" in events
+    assert " Total Nonlinear Iterations: 3" in events
+
+    # Check metrics uploaded from PostProcessor CSV
+    metrics = dict(run_data.metrics)
+    assert metrics["bottom"]["max"] > 0.49
+
+    # Check residuals metrics uploaded from log file
+    assert metrics.get("linear_iteration_residuals")
+    assert metrics.get("nonlinear_iteration_residuals")
+
+    assert metrics["linear_iteration_residuals"]["count"] > 200
+    assert metrics["nonlinear_iteration_residuals"]["count"] > 2
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input file uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("diffusion.i").exists()
+
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("diffusion.csv").exists()
 
 
 @pytest.mark.parametrize(
