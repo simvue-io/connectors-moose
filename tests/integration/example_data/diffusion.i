@@ -97,5 +97,7 @@
 []
 
 [Outputs]
-  csv = true
+  [csv]
+    type = CSV
+  []
 []

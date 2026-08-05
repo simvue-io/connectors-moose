@@ -74,7 +74,5 @@
   [exodus]
     type = Exodus
   []
-  [csv]
-    type = CSV
-  []
+  csv = true
 []

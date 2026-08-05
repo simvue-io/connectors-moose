@@ -418,15 +418,19 @@ class MooseRun(WrappedRun):
         current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).stem
-        substrs = file_name.replace(
-            f"{self._results_prefix}_"
-            if self._file_base
-            else f"{self._results_prefix}_csv_",
+        # Note if using
+        vector_name, serial_num = file_name.replace(
+            f"{self._results_prefix}_",
             "",
             1,
-        ).split("_")
-        serial_num = int(substrs[-1])  # Number is always before the '.csv'
-        vector_name = substrs[-2]  # Vector name always before the serial number
+        ).rsplit("_", 1)
+        serial_num = int(serial_num)
+
+        # If no file_base provided, and not using a custom CSV output section, MOOSE will prepend '_out' to name
+        # So remove this, if present. If using custom CSV block,
+        # it'll prepend the name of that block, but we have no good way of knowing what that is to remove it
+        if not self._file_base and vector_name.startswith("out_"):
+            vector_name = vector_name.replace("out_", "", 1)
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
         time_file = f"{input_file.rsplit('_', 1)[0]}_time.csv"
