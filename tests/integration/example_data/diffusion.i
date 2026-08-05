@@ -100,4 +100,8 @@
   [csv]
     type = CSV
   []
+  [console]
+    type = Console
+    output_file = true
+  []
 []
