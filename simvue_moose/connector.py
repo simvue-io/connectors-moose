@@ -418,14 +418,15 @@ class MooseRun(WrappedRun):
         current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).stem
-        vector_name, serial_num = file_name.replace(
+        substrs = file_name.replace(
             f"{self._results_prefix}_"
             if self._file_base
             else f"{self._results_prefix}_csv_",
             "",
             1,
-        ).rsplit("_", 1)
-        serial_num = int(serial_num)
+        ).split("_")
+        serial_num = int(substrs[-1])  # Number is always before the '.csv'
+        vector_name = substrs[-2]  # Vector name always before the serial number
 
         # If user has enabled time_data in their MOOSE file, get latest line from this file and save time
         time_file = f"{input_file.rsplit('_', 1)[0]}_time.csv"
@@ -441,7 +442,7 @@ class MooseRun(WrappedRun):
             metrics["time"] = current_time_data[0]
             metrics["step"] = current_time_data[1]
         else:
-            metrics["step"] = int(serial_num)
+            metrics["step"] = serial_num
             if self._dt:
                 metrics["time"] = metrics["step"] * self._dt
 
@@ -472,17 +473,7 @@ class MooseRun(WrappedRun):
             self._unsupported_vectors.append(vector_name)
             if not self._loading_historic_run:
                 self.file_monitor.exclude(
-                    str(
-                        self._output_dir_path.joinpath(
-                            f"{self._results_prefix}_{vector_name}_[0-9]*.csv"
-                        )
-                    )
-                    if self._file_base
-                    else str(
-                        self._output_dir_path.joinpath(
-                            f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
-                        )
-                    )
+                    f"{self._output_dir_path / self._results_prefix}*_{vector_name}_[0-9][0-9][0-9][0-9].csv"
                 )
             return {}, {}
         if len(varying_dims) < 1:
@@ -614,6 +605,10 @@ class MooseRun(WrappedRun):
         # Record time here, for that for static problems the overall time for execution will be returned
         self._time = time.time()
 
+        self.file_monitor.exclude(
+            str(self._output_dir_path.joinpath(f"{self._results_prefix}_*_time.csv"))
+        )
+
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
             path_glob_exprs=f"{self.name}_moose_simulation.out",
@@ -623,29 +618,17 @@ class MooseRun(WrappedRun):
         )
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
-            path_glob_exprs=str(
-                self._output_dir_path.joinpath(
-                    f"{self._results_prefix}.csv"
-                    if self._file_base
-                    else f"{self._results_prefix}_csv.csv"
-                )
-            ),
+            path_glob_exprs=[
+                f"{self._output_dir_path / self._results_prefix}.csv",
+                f"{self._output_dir_path / self._results_prefix}_*[!0-9].csv",
+            ],
             parser_func=mp_tail_parser.record_csv,
             callback=self._per_metric_callback,
-        )
-        self.file_monitor.exclude(
-            str(self._output_dir_path.joinpath(f"{self._results_prefix}_*_time.csv"))
         )
         # Monitor each file created by a Vector PostProcessor, and upload results to Simvue if file matches an expected form.
         if self.track_vector_postprocessors:
             self.file_monitor.track(
-                path_glob_exprs=str(
-                    self._output_dir_path.joinpath(
-                        f"{self._results_prefix}_*.csv"
-                        if self._file_base
-                        else f"{self._results_prefix}_csv_*.csv"
-                    )
-                ),
+                path_glob_exprs=f"{self._output_dir_path / self._results_prefix}*_[0-9][0-9][0-9][0-9].csv",
                 parser_func=self._vector_postprocessor_parser,
                 callback=self._per_metric_callback,
                 static=True,
@@ -813,30 +796,25 @@ class MooseRun(WrappedRun):
                 for line in file_lines:
                     self._log_parser(line)
 
-        # Extract metrics CSV file
-        csv_path = (
-            self._output_dir_path.joinpath(f"{self._results_prefix}.csv")
-            if self._file_base
-            else self._output_dir_path.joinpath(f"{self._results_prefix}_csv.csv")
-        )
-        if csv_path.exists():
-            with open(csv_path, "r") as _file:
+        scalar_csv_paths = list(
+            self._output_dir_path.glob(f"{self._results_prefix}.csv")
+        ) + list(self._output_dir_path.glob(f"{self._results_prefix}_*[!0-9].csv"))
+
+        for path in scalar_csv_paths:
+            with open(path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
                     _data = {key: float(value) for key, value in _metric.items()}
                     _data["step"] = _step
                     self._per_metric_callback(_data, {})
 
         if self.track_vector_postprocessors:
-            csv_paths = (
-                self._output_dir_path.glob(f"{self._results_prefix}_*.csv")
-                if self._file_base
-                else self._output_dir_path.glob(f"{self._results_prefix}_csv_*.csv")
+            vector_csv_paths = self._output_dir_path.glob(
+                f"{self._results_prefix}*_[0-9][0-9][0-9][0-9].csv"
             )
-            for path in csv_paths:
+            for path in vector_csv_paths:
                 if path.match(f"{self._results_prefix}_*_time.csv") or any(
-                    path.match(f"{self._results_prefix}_{vector_name}_[0-9]*.csv")
-                    or path.match(
-                        f"{self._results_prefix}_csv_{vector_name}_[0-9]*.csv"
+                    path.match(
+                        f"{self._results_prefix}_*{vector_name}_[0-9][0-9][0-9][0-9].csv"
                     )
                     for vector_name in self._unsupported_vectors
                 ):
