@@ -304,31 +304,30 @@ class MooseRun(WrappedRun):
                 self._framework_info_header = True
                 continue
 
-            # Then check if we are in final line of this header
-            if "MOOSE Preconditioner:" in line:
-                self._framework_header_parser(line)
-                self._framework_info_header = False
-                self.update_metadata(self._header_metadata)
-
-                # Check if static solve, in case not found in input file
-                if (
-                    self._header_metadata.get("moose", {})
-                    .get("executioner", "")
-                    .lower()
-                    == "steady"
-                ):
-                    self._steady = True
-                continue
-
             if self._framework_info_header:
                 self._framework_header_parser(line)
-                continue
 
             # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
             for name, pattern in self._patterns.items():
                 match = pattern.search(line)
                 if not match:
                     continue
+
+                # There is no way to reliably define when we are at the end of the header to extract metadata from
+                # So we will check against our other log patterns each time, and if one matches, we must be at the end
+                # So disable framework header parsing, update metadata, check for static solve
+                if self._framework_info_header:
+                    self._framework_info_header = False
+                    self.update_metadata(self._header_metadata)
+
+                    # Check if static solve, in case not found in input file
+                    if (
+                        self._header_metadata.get("moose", {})
+                        .get("executioner", "")
+                        .lower()
+                        == "steady"
+                    ):
+                        self._steady = True
 
                 if name == "time_step":
                     self.log_event(line.rstrip())

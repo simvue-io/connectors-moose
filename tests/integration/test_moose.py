@@ -238,12 +238,12 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
         run_data.metadata["diffusion"]["Postprocessors"]["left"]["type"]
         == "SideAverageValue"
     )
-    assert run_data.metadata["diffusion"]["BCs"]["right"]["functor"] == "1"
+    assert run_data.metadata["diffusion"]["GlobalParams"]["diffusivity"] == 1
 
     # Check events uploaded from log
     assert "Beginning Nonlinear Iteration 1" in events
     assert " Solve Converged!" in events
-    assert " Total Nonlinear Iterations: 3" in events
+    assert " Total Nonlinear Iterations: 3." in events
 
     # Check metrics uploaded from PostProcessor CSV
     metrics = dict(run_data.metrics)
