@@ -9,8 +9,8 @@
   [gen]
     type = GeneratedMeshGenerator
     dim = 2
-    nx = 5
-    ny = 5
+    nx = 50
+    ny = 50
     elem_type = TRI6
   []
 []
