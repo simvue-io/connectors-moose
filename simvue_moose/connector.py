@@ -672,6 +672,11 @@ class MooseRun(WrappedRun):
     ):
         """Command to launch the MOOSE simulation and track it with Simvue.
 
+        Note the following current limitations:
+            * Only 1D Vector PostProcessors, varying along one cartesian direction, are supported
+            * If outputting scalar postprocessors with a custom `CSV` block in your input file, the name of this
+              block should not end in a number (or alternatively a `file_base` should be specified).
+
         Parameters
         ----------
         moose_application_path : pydantic.FilePath
@@ -690,7 +695,6 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-            Note that this will only currently work for 1D slices, which vary along one dimension.
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any environment variables to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
