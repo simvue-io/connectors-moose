@@ -687,6 +687,7 @@ class MooseRun(WrappedRun):
             Path to a directory which you would like MOOSE to run in, by default None
             If this directory does not exist, it will be created.
             Note that relative paths in your MOOSE input file will be resolved relative to this directory.
+            If `file_base` is not specified, MOOSE will output results to the parent directory of the input file regardless of this setting.
             Uses the current working directory by default.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
