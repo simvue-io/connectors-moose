@@ -115,6 +115,7 @@ class MooseRun(WrappedRun):
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
+        self._postprocessor_block = False
         self._header_metadata = {"moose": {}}
 
         super().__init__(
@@ -310,9 +311,21 @@ class MooseRun(WrappedRun):
             if "Framework Information:" in line:
                 self._framework_info_header = True
                 continue
+            if "Postprocessor Values:" in line:
+                self._postprocessor_block = True
+                continue
 
             if self._framework_info_header:
                 self._framework_header_parser(line)
+
+            if self._postprocessor_block:
+                if not line.strip():
+                    # Empty line at end of postprocessor table
+                    self._postprocessor_block = False
+                continue
+
+            if not line.strip():
+                continue
 
             # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
             for name, pattern in self._patterns.items():
@@ -397,6 +410,10 @@ class MooseRun(WrappedRun):
                         ]
                     )
                 break
+            else:
+                # No pattern matched, and not in header or PostProcessor block
+                # Just upload line as an event
+                self.log_event(line)
 
         return {}, {}
 
