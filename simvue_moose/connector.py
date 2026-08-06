@@ -647,7 +647,10 @@ class MooseRun(WrappedRun):
             )
 
         for file in files_to_upload:
-            if file.absolute() == pathlib.Path(self.moose_file_path).absolute():
+            if (
+                file.is_dir()
+                or file.absolute() == pathlib.Path(self.moose_file_path).absolute()
+            ):
                 continue
             self.save_file(file, category="output")
 
