@@ -7,6 +7,7 @@ import csv
 import os
 import pathlib
 import re
+import shutil
 import time
 import typing
 from functools import reduce
@@ -578,10 +579,16 @@ class MooseRun(WrappedRun):
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
         if self.run_in_parallel:
+            launcher = None
             if os.getenv("SLURM_JOB_ID"):
-                command.append("srun")
-            else:
-                command.append("mpiexec")
+                launcher = shutil.which("srun")
+
+            launcher = launcher or shutil.which("mpiexec") or shutil.which("mpirun")
+            if not launcher:
+                raise RuntimeError(
+                    "Run in parallel requested, but could not find srun, mpiexec, or mpirun executables. Make sure one of these is available in your environment."
+                )
+            command.append(launcher)
             command += ["-n", str(self.num_processors)]
             command += format_command_env_vars(self.mpiexec_env_vars)
         command += [
