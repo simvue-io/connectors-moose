@@ -146,6 +146,10 @@ class MooseRun(WrappedRun):
         workdir = self.workdir_path if self.workdir_path else pathlib.Path.cwd()
 
         if not self._file_base:
+            if self.workdir_path:
+                print(
+                    "Warning: No file_base specified in MOOSE file - results will be generated in parent directory of input file."
+                )
             # Uses directory containing input file, with moose file name stem as prefix
             return self.moose_file_path.parent, self.moose_file_path.stem
 
@@ -165,7 +169,7 @@ class MooseRun(WrappedRun):
         if dir_path.startswith("/"):
             if self.workdir_path:
                 print(
-                    "Warning: Absolute file path detected in MOOSE input file - this location takes precedence over provided workdir_path."
+                    "Warning: Absolute file path detected in MOOSE input file - outputs will be generated here and not in the workdir_path provided."
                 )
             return pathlib.Path(dir_path), results_prefix
         # Otherwise, relative path, should be relative to working dir
@@ -548,15 +552,6 @@ class MooseRun(WrappedRun):
             # Ensure workdir path exists
             self.workdir_path.mkdir(parents=True, exist_ok=True)
 
-            # If not cwd, create copy of input file into this path
-            moose_file_copy = self.workdir_path.joinpath(self.moose_file_path.name)
-            if self.moose_file_path.resolve() != moose_file_copy.resolve():
-                shutil.copy(
-                    self.moose_file_path,
-                    moose_file_copy,
-                )
-                self.moose_file_path = moose_file_copy
-
         # Save the MOOSE file for this run to the Simvue server
         if pathlib.Path(self.moose_file_path).exists() and (
             self.upload_files is None or self.moose_file_path.name in self.upload_files
@@ -687,8 +682,8 @@ class MooseRun(WrappedRun):
             Path to the MOOSE configuration file
         workdir_path : str | pathlib.Path | None, optional
             Path to a directory which you would like MOOSE to run in, by default None
-            This is where MOOSE will generate the results from the simulation
-            If a directory does not already exist at this path, it will be created
+            If this directory does not exist, it will be created.
+            Note that relative paths in your MOOSE input file will be resolved relative to this directory.
             Uses the current working directory by default.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
