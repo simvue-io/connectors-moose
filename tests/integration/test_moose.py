@@ -364,14 +364,8 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
                 )
         else:
             # Files given default names, starting with name of input file
-            if workdir_path:
-                assert (
-                    pathlib.Path(tempd)
-                    .joinpath("my_results", "thermal_bar_out.csv")
-                    .exists()
-                )
-            else:
-                assert pathlib.Path(tempd).joinpath("thermal_bar_out.csv").exists()
+            # Always puts in parent dir of input file, regardless of working dir
+            assert pathlib.Path(tempd).joinpath("thermal_bar_out.csv").exists()
 
     # Change current working directory back to normal
     monkeypatch.chdir(original_cwd)
