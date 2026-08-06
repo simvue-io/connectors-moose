@@ -4,9 +4,9 @@ This module provides functionality for using Simvue to track and monitor a MOOSE
 """
 
 import csv
+import os
 import pathlib
 import re
-import shutil
 import time
 import typing
 from functools import reduce
@@ -578,7 +578,11 @@ class MooseRun(WrappedRun):
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
         if self.run_in_parallel:
-            command += ["mpiexec", "-n", str(self.num_processors)]
+            if os.getenv("SLURM_JOB_ID"):
+                command.append("srun")
+            else:
+                command.append("mpiexec")
+            command += ["-n", str(self.num_processors)]
             command += format_command_env_vars(self.mpiexec_env_vars)
         command += [
             str(self.moose_application_path.absolute()),
