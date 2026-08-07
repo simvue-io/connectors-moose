@@ -84,9 +84,7 @@ def run_moose(
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
 @pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
 @pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
-def test_moose_connector(
-    offline, parallel, load, upload_misc_logs, offline_cache_setup
-):
+def test_moose_connector(offline, parallel, load, offline_cache_setup):
     try:
         subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
