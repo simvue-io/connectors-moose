@@ -68,6 +68,8 @@ with MooseRun() as run:
         # Optionally choose which files to upload:
         # You can optionally choose to track VectorPostProcessor outputs too:
         track_vector_postprocessors=True,
+        # Can choose to enable upload of 'miscellanous' log messages as Events
+        upload_miscellaneous_logs=True,
         # And you can choose whether to run it in parallel:
         run_in_parallel=True,
         num_processors=2,
