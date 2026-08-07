@@ -307,7 +307,7 @@ class MooseRun(WrappedRun):
             An (empty) dictionary of metadata, and a dictionary of metrics data extracted from the log
 
         """
-        for line in file_content.split("\n"):
+        for line in file_content.splitlines():
             # First, check if we are inside the framework information header
             if "Framework Information:" in line:
                 self._framework_info_header = True
@@ -409,9 +409,11 @@ class MooseRun(WrappedRun):
                     )
                 break
             else:
-                # No pattern matched, and not in header or PostProcessor block
-                # Just upload line as an event
-                if self.upload_miscellaneous_logs and not self._framework_info_header:
+                # No pattern matched, and not in PostProcessor block, upload line as event
+                # Note there is no reliable way to tell when a header block has ended and a misc log has begun
+                # Since header info is only printed once, will also upload this as Events
+                # So that misc log lines between header and solve beginning are not missed
+                if self.upload_miscellaneous_logs and not self._postprocessor_block:
                     self.log_event(line)
 
         return {}, {}

@@ -5,7 +5,10 @@ import pathlib
 import pytest
 
 
-def test_moose_log_parser(folder_setup):
+@pytest.mark.parametrize(
+    "upload_misc_logs", (True, False), ids=("all_events", "filtered_events")
+)
+def test_moose_log_parser(folder_setup, upload_misc_logs):
     """
     Check that Events and Metrics are correctly parsed from the MOOSE log file and uploaded.
     """
@@ -14,15 +17,14 @@ def test_moose_log_parser(folder_setup):
         run.config(disable_resources_metrics=True)
         run.init(name=name, folder=folder_setup)
         run_id = run.id
+        run.upload_miscellaneous_logs = upload_misc_logs
 
-        run.log_event("Beginning MOOSE simulation...")
         for line in (
             pathlib.Path(__file__)
             .parent.joinpath("example_data", "moose_log.txt")
             .open("r")
         ):
             run._log_parser(line)
-        run.log_event("Simulation complete!")
 
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
@@ -37,6 +39,24 @@ def test_moose_log_parser(folder_setup):
         "Terminator 'handle-too-hot' is causing the execution to terminate."
         in event_messages
     )
+
+    # Residal lines themselves not uploaded
+    assert not any("Linear |R|" in msg for msg in event_messages)
+    assert not any("Nonlinear |R|" in msg for msg in event_messages)
+
+    # Postprocessor lines not uploaded
+    assert not any("Postprocessor Values:" in msg for msg in event_messages)
+    assert not any("+--" in msg for msg in event_messages)
+    assert not any("| time" in msg for msg in event_messages)
+
+    # Should upload everything not handled elsewhere if upload_misc_logs
+    results = (
+        "*** Warning ***" in event_messages,
+        "/home/workspace/copper_mug.i:131.5:" in event_messages,
+        "The following warning occurred in the UserObject 'handle-too-hot' of type Terminator."
+        in event_messages,
+    )
+    assert all(results) if upload_misc_logs else not any(results)
 
     # Check that total linear and nonlinear events from each step uploaded as metrics
     # Correct answers calculated manually from log file
@@ -94,14 +114,18 @@ def test_moose_log_parser_steady(folder_setup, upload_misc_logs):
     assert " Total Nonlinear Iterations: 2." in event_messages
     assert " Total Linear Iterations: 102." in event_messages
 
-    if upload_misc_logs:
-        # Should upload everything not handled elsewhere
-        assert "    Preparing Mesh" in event_messages
-        assert "Performing automatic scaling calculation" in event_messages
-        # But not header lines
-        assert "PETSc Version:           3.25.2" not in event_messages
-        # Or residual lines
-        assert "      0 Linear |R| = 2.776567e-08" not in event_messages
+    # Residal lines themselves not uploaded
+    assert not any("Linear |R|" in msg for msg in event_messages)
+    assert not any("Nonlinear |R|" in msg for msg in event_messages)
+
+    # Should upload everything not handled elsewhere if upload_misc_logs
+    results = (
+        "    Preparing Mesh" in event_messages,
+        "Performing automatic scaling calculation" in event_messages,
+        "PETSc Version:           3.25.2"
+        in event_messages,  # not ideal, but can't reliably distinguish between header and misc events
+    )
+    assert all(results) if upload_misc_logs else not any(results)
 
     # Check that linear and nonlinear residuals uploaded as metrics
     linear_iteration_residuals = client.get_metric_values(
