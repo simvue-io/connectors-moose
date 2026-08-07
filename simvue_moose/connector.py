@@ -545,7 +545,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern="Solve did not converge",
+            pattern="Solve Did Not Converge",
             notification="email",
         )
         if self.workdir_path:
