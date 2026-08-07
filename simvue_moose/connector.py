@@ -413,7 +413,7 @@ class MooseRun(WrappedRun):
                 # Note there is no reliable way to tell when a header block has ended and a misc log has begun
                 # Since header info is only printed once, will also upload this as Events
                 # So that misc log lines between header and solve beginning are not missed
-                if self.upload_miscellaneous_logs and not self._postprocessor_block:
+                if self.upload_miscellaneous_logs and line.strip():
                     self.log_event(line)
 
         return {}, {}
