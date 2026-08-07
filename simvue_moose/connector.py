@@ -94,6 +94,7 @@ class MooseRun(WrappedRun):
         self.moose_file_path: pydantic.FilePath = None
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
+        self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
         self.moose_env_vars: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
@@ -324,9 +325,6 @@ class MooseRun(WrappedRun):
                     self._postprocessor_block = False
                 continue
 
-            if not line.strip():
-                continue
-
             # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
             for name, pattern in self._patterns.items():
                 match = pattern.search(line)
@@ -413,7 +411,8 @@ class MooseRun(WrappedRun):
             else:
                 # No pattern matched, and not in header or PostProcessor block
                 # Just upload line as an event
-                self.log_event(line)
+                if self.upload_miscellaneous_logs and not self._framework_info_header:
+                    self.log_event(line)
 
         return {}, {}
 
@@ -692,6 +691,7 @@ class MooseRun(WrappedRun):
         moose_file_path: pydantic.FilePath,
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
+        upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
         moose_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
@@ -722,6 +722,9 @@ class MooseRun(WrappedRun):
             Results should be supplied relative to the output directory provided in the MOOSE file,
             and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        upload_miscellaneous_logs : bool, optional
+            Whether to upload any lines from the console log which have not been otherwise handled as Events, by default False
+            Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
         moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
@@ -738,6 +741,7 @@ class MooseRun(WrappedRun):
         self.moose_file_path = moose_file_path
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
+        self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self.moose_env_vars = moose_env_vars or {}
         self.run_in_parallel = run_in_parallel
@@ -754,6 +758,7 @@ class MooseRun(WrappedRun):
         results_dir: pydantic.DirectoryPath | None = None,
         log_path: pydantic.FilePath | None = None,
         upload_files: list[str] | None = None,
+        upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
     ):
         """Command to load a set of results from a MOOSE simulation into Simvue.
@@ -774,6 +779,9 @@ class MooseRun(WrappedRun):
             Results should be supplied relative to the output directory provided in the MOOSE file,
             and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        upload_miscellaneous_logs : bool, optional
+            Whether to upload any lines from the console log which have not been otherwise handled as Events, by default False
+            Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
 
@@ -787,6 +795,7 @@ class MooseRun(WrappedRun):
         """
         self.moose_file_path = moose_file_path
         self.upload_files = upload_files
+        self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self._loading_historic_run = True
 

@@ -2,6 +2,7 @@ from simvue_moose.connector import MooseRun
 import simvue
 import uuid
 import pathlib
+import pytest
 
 
 def test_moose_log_parser(folder_setup):
@@ -26,14 +27,15 @@ def test_moose_log_parser(folder_setup):
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
     events = client.get_events(run_id)
+    event_messages = [event["message"] for event in events]
 
-    assert events[1]["message"] == "Time Step 1, time = 1, dt = 1"
-    assert events[2]["message"] == " Solve Converged!"
-    assert events[4]["message"] == " Total Nonlinear Iterations: 3."
-    assert events[5]["message"] == " Total Linear Iterations: 112."
+    assert "Time Step 1, time = 1, dt = 1" in event_messages
+    assert " Solve Converged!" in event_messages
+    assert " Total Nonlinear Iterations: 3." in event_messages
+    assert " Total Linear Iterations: 112." in event_messages
     assert (
-        events[-2]["message"]
-        == "Terminator 'handle-too-hot' is causing the execution to terminate."
+        "Terminator 'handle-too-hot' is causing the execution to terminate."
+        in event_messages
     )
 
     # Check that total linear and nonlinear events from each step uploaded as metrics
@@ -56,7 +58,10 @@ def test_moose_log_parser(folder_setup):
     assert run_data.status == "terminated"
 
 
-def test_moose_log_parser_steady(folder_setup):
+@pytest.mark.parametrize(
+    "upload_misc_logs", (True, False), ids=("all_events", "filtered_events")
+)
+def test_moose_log_parser_steady(folder_setup, upload_misc_logs):
     """
     Check that Events and Metrics are correctly parsed from log file of a steady MOOSE simulation.
     """
@@ -65,30 +70,38 @@ def test_moose_log_parser_steady(folder_setup):
         run.config(disable_resources_metrics=True)
         run.init(name=name, folder=folder_setup)
         run_id = run.id
-
-        run.log_event("Beginning MOOSE simulation...")
+        run.upload_miscellaneous_logs = upload_misc_logs
         for line in (
             pathlib.Path(__file__)
             .parent.joinpath("example_data", "moose_log_steady.txt")
             .open("r")
         ):
             run._log_parser(line)
-        run.log_event("Simulation complete!")
 
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
     events = client.get_events(run_id)
+    event_messages = [event["message"] for event in events]
 
-    assert events[1]["message"] == "Beginning Nonlinear Iteration 0"
+    assert "Beginning Nonlinear Iteration 0" in event_messages
     assert (
-        events[2]["message"]
-        == "    Linear Solve Did Not Converge Due To Diverged_Its Iterations 50"
+        "    Linear Solve Did Not Converge Due To Diverged_Its Iterations 50"
+        in event_messages
     )
-    assert events[3]["message"] == " Total Nonlinear Iterations: 1."
-    assert events[4]["message"] == " Total Linear Iterations: 51."
-    assert events[5]["message"] == "Beginning Nonlinear Iteration 1"
-    assert events[7]["message"] == " Total Nonlinear Iterations: 2."
-    assert events[8]["message"] == " Total Linear Iterations: 102."
+    assert " Total Nonlinear Iterations: 1." in event_messages
+    assert " Total Linear Iterations: 51." in event_messages
+    assert "Beginning Nonlinear Iteration 1" in event_messages
+    assert " Total Nonlinear Iterations: 2." in event_messages
+    assert " Total Linear Iterations: 102." in event_messages
+
+    if upload_misc_logs:
+        # Should upload everything not handled elsewhere
+        assert "    Preparing Mesh" in event_messages
+        assert "Performing automatic scaling calculation" in event_messages
+        # But not header lines
+        assert "PETSc Version:           3.25.2" not in event_messages
+        # Or residual lines
+        assert "      0 Linear |R| = 2.776567e-08" not in event_messages
 
     # Check that linear and nonlinear residuals uploaded as metrics
     linear_iteration_residuals = client.get_metric_values(
