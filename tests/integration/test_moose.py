@@ -20,6 +20,7 @@ def run_moose(
     offline,
     parallel,
     load,
+    upload_misc_logs,
     moose_app_path,
 ) -> None:
 
@@ -50,6 +51,7 @@ def run_moose(
                 results_dir=load_results_dir,
                 # You can optionally choose to track VectorPostProcessor outputs too:
                 track_vector_postprocessors=True,
+                upload_miscellaneous_logs=upload_misc_logs,
             )
         else:
             # Then call the .launch() method to start your MOOSE simulation
@@ -57,6 +59,7 @@ def run_moose(
                 moose_application_path=moose_app_path,
                 moose_file_path=moose_file_path,
                 workdir_path=workdir_path,
+                upload_miscellaneous_logs=upload_misc_logs,
                 # You can optionally choose to track VectorPostProcessor outputs too:
                 track_vector_postprocessors=True,
                 # And you can choose whether to run it in parallel
@@ -81,7 +84,9 @@ def run_moose(
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
 @pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
 @pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
-def test_moose_connector(offline, parallel, load, offline_cache_setup):
+def test_moose_connector(
+    offline, parallel, load, upload_misc_logs, offline_cache_setup
+):
     try:
         subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
@@ -104,6 +109,7 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
             offline=offline,
             parallel=parallel,
             load=load,
+            upload_misc_logs=False,
             moose_app_path=MOOSE_APP_PATH,
         )
 
@@ -143,6 +149,15 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     # Check events uploaded from log
     assert "Time Step 1, time = 2, dt = 2" in events
     assert "Time Step 15, time = 30, dt = 2" in events
+
+    # Check misc logs not uploaded
+    assert not any("Finished Executing" in msg for msg in events)
+
+    # Check PostProcessor and residuals not uploaded as events
+    assert "Postprocessor Values:" not in events
+    assert not any("+--" in msg for msg in events)
+    assert not any("Linear |R|" in msg for msg in events)
+    assert not any("Nonlinear |R|" in msg for msg in events)
 
     # Check metrics uploaded from PostProcessor CSV
     metrics = dict(run_data.metrics)
@@ -215,6 +230,7 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
             offline=offline,
             parallel=parallel,
             load=load,
+            upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
         )
 
@@ -254,7 +270,15 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
     assert " Solve Converged!" in events
     assert " Total Nonlinear Iterations: 3." in events
 
-    # Check metrics uploaded from PostProcessor CSV
+    # Check misc logs uploaded
+    assert "Outlier Variable Residual Norms:" in events
+
+    # Check PostProcessor and residuals not uploaded as events
+    assert "Postprocessor Values:" not in events
+    assert not any("+--" in msg for msg in events)
+    assert not any("Linear |R|" in msg for msg in events)
+    assert not any("Nonlinear |R|" in msg for msg in events)
+
     metrics = dict(run_data.metrics)
     assert metrics["bottom"]["max"] > 0.49
 
