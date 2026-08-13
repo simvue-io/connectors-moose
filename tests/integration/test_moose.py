@@ -49,7 +49,7 @@ def run_moose(
             run.load(
                 moose_file_path=moose_file_path,
                 results_dir=load_results_dir,
-                # You can optionally choose to track VectorPostProcessor outputs too:
+                # You can optionally choose to track VectorPostProcessor outputs:
                 track_vector_postprocessors=True,
                 upload_miscellaneous_logs=upload_misc_logs,
             )
@@ -60,7 +60,7 @@ def run_moose(
                 moose_file_path=moose_file_path,
                 workdir_path=workdir_path,
                 upload_miscellaneous_logs=upload_misc_logs,
-                # You can optionally choose to track VectorPostProcessor outputs too:
+                # You can optionally choose to track VectorPostProcessor outputs:
                 track_vector_postprocessors=True,
                 # And you can choose whether to run it in parallel
                 run_in_parallel=parallel,
@@ -360,7 +360,7 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
                 workdir_path=pathlib.Path(tempd).joinpath("my_results")
                 if workdir_path
                 else None,
-                # You can optionally choose to track VectorPostProcessor outputs too:
+                # You can optionally choose to track VectorPostProcessor outputs:
                 track_vector_postprocessors=True,
             )
 

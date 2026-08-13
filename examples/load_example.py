@@ -51,7 +51,7 @@ with MooseRun() as run:
         # upload_files = ["simvue_thermal.e"]
         # Can choose to enable upload of 'miscellanous' log messages as Events
         upload_miscellaneous_logs=True,
-        # You can optionally choose to track VectorPostProcessor outputs too:
+        # You can optionally choose to track VectorPostProcessor outputs:
         track_vector_postprocessors=True,
     )
 
