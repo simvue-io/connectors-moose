@@ -810,6 +810,9 @@ class MooseRun(WrappedRun):
         ) + list(self._output_dir_path.glob(f"{self._results_prefix}_*[!0-9].csv"))
 
         for path in scalar_csv_paths:
+            # Ignore Vector PostProcessor time files
+            if path.match(f"{self._results_prefix}_*_time.csv"):
+                continue
             with open(path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
                     _data = {key: float(value) for key, value in _metric.items()}
