@@ -71,7 +71,7 @@ with MooseRun() as run:
         # And you can choose whether to run it in parallel:
         run_in_parallel=True,
         num_processors=2,
-        mpiexec_env_vars={"allow-run-as-root": True},
+        parallel_cli_options={"allow-run-as-root": True},
     )
 
     # Once the simulation is complete, you can upload any final items to the Simvue run before it closes

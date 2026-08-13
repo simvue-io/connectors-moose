@@ -4,6 +4,7 @@ This module provides functionality for using Simvue to track and monitor a MOOSE
 """
 
 import csv
+import os
 import pathlib
 import re
 import shutil
@@ -94,10 +95,10 @@ class MooseRun(WrappedRun):
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.track_vector_postprocessors: bool = None
-        self.moose_env_vars: typing.Dict[str, typing.Any] = None
+        self.moose_cli_options: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
-        self.mpiexec_env_vars: typing.Dict[str, typing.Any] = None
+        self.parallel_cli_options: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
         self._file_base: str | None = None
@@ -572,8 +573,18 @@ class MooseRun(WrappedRun):
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
         if self.run_in_parallel:
-            command += ["mpiexec", "-n", str(self.num_processors)]
-            command += format_command_env_vars(self.mpiexec_env_vars)
+            launcher = None
+            if os.getenv("SLURM_JOB_ID"):
+                launcher = shutil.which("srun")
+
+            launcher = launcher or shutil.which("mpiexec") or shutil.which("mpirun")
+            if not launcher:
+                raise RuntimeError(
+                    "Run in parallel requested, but could not find srun, mpiexec, or mpirun executables. Make sure one of these is available in your environment."
+                )
+            command.append(launcher)
+            command += ["-n", str(self.num_processors)]
+            command += format_command_env_vars(self.parallel_cli_options)
         command += [
             str(self.moose_application_path.absolute()),
             "-i",
@@ -581,7 +592,7 @@ class MooseRun(WrappedRun):
             "--color",
             "off",
         ]
-        command += format_command_env_vars(self.moose_env_vars)
+        command += format_command_env_vars(self.moose_cli_options)
 
         # Delete .out file, if it exists, so we don't upload old events
         pathlib.Path(f"{self.name}_moose_simulation.out").unlink(missing_ok=True)
@@ -663,10 +674,10 @@ class MooseRun(WrappedRun):
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         track_vector_postprocessors: bool = False,
-        moose_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
-        mpiexec_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        parallel_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ):
         """Command to launch the MOOSE simulation and track it with Simvue.
 
@@ -694,14 +705,16 @@ class MooseRun(WrappedRun):
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
-            Any environment variables to be passed to MOOSE on startup, by default None
+        moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
+            Any options to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
             Whether to run the MOOSE simulation in parallel, by default False
         num_processors : int, optional
             The number of processors to run a parallel MOOSE job across, by default 1
-        mpiexec_env_vars : typing.Optional[typing.Dict[str, typing.Any]]
-            Any environment variables to pass to mpiexec on startup if running in parallel, by default None
+        parallel_cli_options : typing.Optional[typing.Dict[str, typing.Any]]
+            Any options to pass to the parallel job launcher on startup if running in parallel, by default None
+            These will be applied to whichever parallel job launcher is found first.
+            Looks for `srun` if running on a SLURM system, then `mpiexec`, then `mpirun`.
 
         """
         self.moose_application_path = moose_application_path
@@ -709,10 +722,10 @@ class MooseRun(WrappedRun):
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.moose_env_vars = moose_env_vars or {}
+        self.moose_cli_options = moose_cli_options or {}
         self.run_in_parallel = run_in_parallel
         self.num_processors = num_processors
-        self.mpiexec_env_vars = mpiexec_env_vars or {}
+        self.parallel_cli_options = parallel_cli_options or {}
 
         super().launch()
 
