@@ -292,22 +292,18 @@ class MooseRun(WrappedRun):
     def _log_parser(
         self, file_content: str, **__
     ) -> tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]:
-        """Parse a MOOSE log file line by line as it is written, and extract relevant information.
+        return {}, {"lines": file_content.splitlines()}
+
+    def _log_callback(self, data: dict[str, list[str]], _: dict[str, str]) -> None:
+        """Extract relevant information from each line in log file and upload.
 
         Parameters
         ----------
-        file_content : str
-            The next line of the log file
-        **__
-            Additional unused keyword arguments
-
-        Returns
-        -------
-        tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]
-            An (empty) dictionary of metadata, and a dictionary of metrics data extracted from the log
+        data: dict[str, list[str]]
+            Lines from the log file since last read
 
         """
-        for line in file_content.splitlines():
+        for line in data["lines"]:
             # First, check if we are inside the framework information header
             if "Framework Information:" in line:
                 self._framework_info_header = True
@@ -643,8 +639,7 @@ class MooseRun(WrappedRun):
         self.file_monitor.tail(
             path_glob_exprs=f"{self.name}_moose_simulation.out",
             parser_func=mp_tail_parser.log_parser(self._log_parser),
-            # tracked_values=list(self._patterns.values()),
-            # labels=list(self._patterns.keys()),
+            callback=self._log_callback,
         )
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(

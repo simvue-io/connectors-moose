@@ -19,12 +19,12 @@ def test_moose_log_parser(folder_setup, upload_misc_logs):
         run_id = run.id
         run.upload_miscellaneous_logs = upload_misc_logs
 
-        for line in (
+        meta, data = run._log_parser(
             pathlib.Path(__file__)
             .parent.joinpath("example_data", "moose_log.txt")
-            .open("r")
-        ):
-            run._log_parser(line)
+            .read_text()
+        )
+        run._log_callback(data, meta)
 
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
@@ -91,12 +91,12 @@ def test_moose_log_parser_steady(folder_setup, upload_misc_logs):
         run.init(name=name, folder=folder_setup)
         run_id = run.id
         run.upload_miscellaneous_logs = upload_misc_logs
-        for line in (
+        meta, data = run._log_parser(
             pathlib.Path(__file__)
             .parent.joinpath("example_data", "moose_log_steady.txt")
-            .open("r")
-        ):
-            run._log_parser(line)
+            .read_text()
+        )
+        run._log_callback(data, meta)
 
     client = simvue.Client()
     # Check messages correctly extracted from log and added as events
