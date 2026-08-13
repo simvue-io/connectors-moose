@@ -96,10 +96,10 @@ class MooseRun(WrappedRun):
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
-        self.moose_env_vars: typing.Dict[str, typing.Any] = None
+        self.moose_cli_options: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
-        self.mpiexec_env_vars: typing.Dict[str, typing.Any] = None
+        self.parallel_cli_options: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
         self._file_base: str | None = None
@@ -117,7 +117,7 @@ class MooseRun(WrappedRun):
         self._loading_historic_run = False
         self._framework_info_header = False
         self._postprocessor_block = False
-        self._header_metadata = {"moose": {}}
+        self._header_metadata = {}
 
         super().__init__(
             mode=mode,
@@ -286,7 +286,7 @@ class MooseRun(WrappedRun):
         # Replace any characters which will fail server side validation of key name with dashes
         key = re.sub(r"[^\w\-\s\.]+", "-", key)
 
-        self._header_metadata["moose"][key] = value
+        self._header_metadata[key] = value
         return
 
     def _log_parser(
@@ -332,15 +332,10 @@ class MooseRun(WrappedRun):
                 # So disable framework header parsing, update metadata, check for static solve
                 if self._framework_info_header:
                     self._framework_info_header = False
-                    self.update_metadata(self._header_metadata)
+                    self.update_metadata({"moose": self._header_metadata})
 
                     # Check if static solve, in case not found in input file
-                    if (
-                        self._header_metadata.get("moose", {})
-                        .get("executioner", "")
-                        .lower()
-                        == "steady"
-                    ):
+                    if self._header_metadata.get("executioner", "").lower() == "steady":
                         self._steady = True
 
                 if name == "time_step":
@@ -439,7 +434,6 @@ class MooseRun(WrappedRun):
         current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).stem
-        # Note if using
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_",
             "",
@@ -560,7 +554,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern="Solve did not converge",
+            pattern="Solve Did Not Converge",
             notification="email",
         )
         if self.workdir_path:
@@ -604,7 +598,7 @@ class MooseRun(WrappedRun):
                 )
             command.append(launcher)
             command += ["-n", str(self.num_processors)]
-            command += format_command_env_vars(self.mpiexec_env_vars)
+            command += format_command_env_vars(self.parallel_cli_options)
         command += [
             str(self.moose_application_path.absolute()),
             "-i",
@@ -612,9 +606,9 @@ class MooseRun(WrappedRun):
             "--color",
             "off",
         ]
-        command += format_command_env_vars(self.moose_env_vars)
+        command += format_command_env_vars(self.moose_cli_options)
 
-        # Delete .out and .err files, if they exist, so we don't upload old events
+        # Delete .out file, if it exists, so we don't upload old events
         pathlib.Path(f"{self.name}_moose_simulation.out").unlink(missing_ok=True)
 
         self.add_process(
@@ -661,6 +655,10 @@ class MooseRun(WrappedRun):
 
     def _post_simulation(self):
         """Upload information to Simvue after the MOOSE simulation finishes."""
+        # If only header information logged, and then MOOSE stops, still want to upload this info
+        if self._framework_info_header and self._header_metadata:
+            self.update_metadata({"moose": self._header_metadata})
+
         if self.upload_files is None:
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
@@ -690,10 +688,10 @@ class MooseRun(WrappedRun):
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
-        moose_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
-        mpiexec_env_vars: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        parallel_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ):
         """Command to launch the MOOSE simulation and track it with Simvue.
 
@@ -724,14 +722,16 @@ class MooseRun(WrappedRun):
             Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        moose_env_vars : typing.Optional[typing.Dict[str, typing.Any]], optional
-            Any environment variables to be passed to MOOSE on startup, by default None
+        moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
+            Any options to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
             Whether to run the MOOSE simulation in parallel, by default False
         num_processors : int, optional
             The number of processors to run a parallel MOOSE job across, by default 1
-        mpiexec_env_vars : typing.Optional[typing.Dict[str, typing.Any]]
-            Any environment variables to pass to mpiexec on startup if running in parallel, by default None
+        parallel_cli_options : typing.Optional[typing.Dict[str, typing.Any]]
+            Any options to pass to the parallel job launcher on startup if running in parallel, by default None
+            These will be applied to whichever parallel job launcher is found first.
+            Looks for `srun` if running on a SLURM system, then `mpiexec`, then `mpirun`.
 
         """
         self.moose_application_path = moose_application_path
@@ -740,10 +740,10 @@ class MooseRun(WrappedRun):
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
-        self.moose_env_vars = moose_env_vars or {}
+        self.moose_cli_options = moose_cli_options or {}
         self.run_in_parallel = run_in_parallel
         self.num_processors = num_processors
-        self.mpiexec_env_vars = mpiexec_env_vars or {}
+        self.parallel_cli_options = parallel_cli_options or {}
 
         super().launch()
 
@@ -844,6 +844,9 @@ class MooseRun(WrappedRun):
         ) + list(self._output_dir_path.glob(f"{self._results_prefix}_*[!0-9].csv"))
 
         for path in scalar_csv_paths:
+            # Ignore Vector PostProcessor time files
+            if path.match(f"{self._results_prefix}_*_time.csv"):
+                continue
             with open(path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
                     _data = {key: float(value) for key, value in _metric.items()}
@@ -855,7 +858,7 @@ class MooseRun(WrappedRun):
                 f"{self._results_prefix}*_[0-9][0-9][0-9][0-9].csv"
             )
             for path in vector_csv_paths:
-                if path.match(f"{self._results_prefix}_*_time.csv") or any(
+                if any(
                     path.match(
                         f"{self._results_prefix}_*{vector_name}_[0-9][0-9][0-9][0-9].csv"
                     )

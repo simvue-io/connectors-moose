@@ -108,7 +108,7 @@ def test_moose_vectorpostprocessor_parser(
                     "example_data", "example_input_1.i"
                 ),
                 track_vector_postprocessors=track_vector_postprocessors,
-                moose_env_vars={"time_file": write_time_file},
+                moose_cli_options={"time_file": write_time_file},
             )
 
     # Get time step 1, check values match those in files
