@@ -115,7 +115,7 @@ class MooseRun(WrappedRun):
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
-        self._header_metadata = {"moose": {}}
+        self._header_metadata = {}
 
         super().__init__(
             mode=mode,
@@ -284,7 +284,7 @@ class MooseRun(WrappedRun):
         # Replace any characters which will fail server side validation of key name with dashes
         key = re.sub(r"[^\w\-\s\.]+", "-", key)
 
-        self._header_metadata["moose"][key] = value
+        self._header_metadata[key] = value
         return
 
     def _log_parser(
@@ -325,15 +325,10 @@ class MooseRun(WrappedRun):
                 # So disable framework header parsing, update metadata, check for static solve
                 if self._framework_info_header:
                     self._framework_info_header = False
-                    self.update_metadata(self._header_metadata)
+                    self.update_metadata({"moose": self._header_metadata})
 
                     # Check if static solve, in case not found in input file
-                    if (
-                        self._header_metadata.get("moose", {})
-                        .get("executioner", "")
-                        .lower()
-                        == "steady"
-                    ):
+                    if self._header_metadata.get("executioner", "").lower() == "steady":
                         self._steady = True
 
                 if name == "time_step":
@@ -425,7 +420,6 @@ class MooseRun(WrappedRun):
         current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).stem
-        # Note if using
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_",
             "",
@@ -546,7 +540,7 @@ class MooseRun(WrappedRun):
         self.create_event_alert(
             name="step_not_converged",
             frequency=1,
-            pattern="Solve did not converge",
+            pattern="Solve Did Not Converge",
             notification="email",
         )
         if self.workdir_path:
@@ -600,7 +594,7 @@ class MooseRun(WrappedRun):
         ]
         command += format_command_env_vars(self.moose_cli_options)
 
-        # Delete .out and .err files, if they exist, so we don't upload old events
+        # Delete .out file, if it exists, so we don't upload old events
         pathlib.Path(f"{self.name}_moose_simulation.out").unlink(missing_ok=True)
 
         self.add_process(
@@ -648,6 +642,10 @@ class MooseRun(WrappedRun):
 
     def _post_simulation(self):
         """Upload information to Simvue after the MOOSE simulation finishes."""
+        # If only header information logged, and then MOOSE stops, still want to upload this info
+        if self._framework_info_header and self._header_metadata:
+            self.update_metadata({"moose": self._header_metadata})
+
         if self.upload_files is None:
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
@@ -823,6 +821,9 @@ class MooseRun(WrappedRun):
         ) + list(self._output_dir_path.glob(f"{self._results_prefix}_*[!0-9].csv"))
 
         for path in scalar_csv_paths:
+            # Ignore Vector PostProcessor time files
+            if path.match(f"{self._results_prefix}_*_time.csv"):
+                continue
             with open(path, "r") as _file:
                 for _step, _metric in enumerate(csv.DictReader(_file)):
                     _data = {key: float(value) for key, value in _metric.items()}
@@ -834,7 +835,7 @@ class MooseRun(WrappedRun):
                 f"{self._results_prefix}*_[0-9][0-9][0-9][0-9].csv"
             )
             for path in vector_csv_paths:
-                if path.match(f"{self._results_prefix}_*_time.csv") or any(
+                if any(
                     path.match(
                         f"{self._results_prefix}_*{vector_name}_[0-9][0-9][0-9][0-9].csv"
                     )
