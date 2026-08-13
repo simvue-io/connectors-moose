@@ -114,7 +114,7 @@ class MooseRun(WrappedRun):
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
-        self._header_metadata = {"moose": {}}
+        self._header_metadata = {}
 
         super().__init__(
             mode=mode,
@@ -283,7 +283,7 @@ class MooseRun(WrappedRun):
         # Replace any characters which will fail server side validation of key name with dashes
         key = re.sub(r"[^\w\-\s\.]+", "-", key)
 
-        self._header_metadata["moose"][key] = value
+        self._header_metadata[key] = value
         return
 
     def _log_parser(
@@ -324,15 +324,10 @@ class MooseRun(WrappedRun):
                 # So disable framework header parsing, update metadata, check for static solve
                 if self._framework_info_header:
                     self._framework_info_header = False
-                    self.update_metadata(self._header_metadata)
+                    self.update_metadata({"moose": self._header_metadata})
 
                     # Check if static solve, in case not found in input file
-                    if (
-                        self._header_metadata.get("moose", {})
-                        .get("executioner", "")
-                        .lower()
-                        == "steady"
-                    ):
+                    if self._header_metadata.get("executioner", "").lower() == "steady":
                         self._steady = True
 
                 if name == "time_step":
@@ -637,6 +632,10 @@ class MooseRun(WrappedRun):
 
     def _post_simulation(self):
         """Upload information to Simvue after the MOOSE simulation finishes."""
+        # If only header information logged, and then MOOSE stops, still want to upload this info
+        if self._framework_info_header and self._header_metadata:
+            self.update_metadata({"moose": self._header_metadata})
+
         if self.upload_files is None:
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
