@@ -823,7 +823,7 @@ class MooseRun(WrappedRun):
                 f"{self._results_prefix}*_[0-9][0-9][0-9][0-9].csv"
             )
             for path in vector_csv_paths:
-                if path.match(f"{self._results_prefix}_*_time.csv") or any(
+                if any(
                     path.match(
                         f"{self._results_prefix}_*{vector_name}_[0-9][0-9][0-9][0-9].csv"
                     )
