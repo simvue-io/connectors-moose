@@ -419,7 +419,6 @@ class MooseRun(WrappedRun):
         current_time_data = None
         # Get name of vector which is being calculated by VectorPostProcessor from filename
         file_name = pathlib.Path(input_file).stem
-        # Note if using
         vector_name, serial_num = file_name.replace(
             f"{self._results_prefix}_",
             "",
@@ -584,7 +583,7 @@ class MooseRun(WrappedRun):
         ]
         command += format_command_env_vars(self.moose_env_vars)
 
-        # Delete .out and .err files, if they exist, so we don't upload old events
+        # Delete .out file, if it exists, so we don't upload old events
         pathlib.Path(f"{self.name}_moose_simulation.out").unlink(missing_ok=True)
 
         self.add_process(
