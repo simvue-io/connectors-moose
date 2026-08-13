@@ -1,0 +1,371 @@
+Currently Setting Up...
+  Setting Mesh.                                                                          [ 10.20 s] [ 5651 MB]
+  Currently Setting Up Undisplaced Mesh
+    Preparing Mesh
+      Updating Mesh.                                                                     [ 14.13 s] [ 6175 MB]
+    Finished Preparing Mesh                                                              [ 15.64 s] [ 6175 MB]
+  Finished Setting Up Undisplaced Mesh                                                   [ 15.64 s] [ 6175 MB]
+  Currently Setting Up Displaced Mesh
+    Preparing Mesh
+      Updating Mesh.                                                                     [ 14.89 s] [ 6715 MB]
+    Finished Preparing Mesh                                                              [ 16.44 s] [ 6715 MB]
+  Finished Setting Up Displaced Mesh                                                     [ 16.44 s] [ 6715 MB]
+  Initializing
+    Updating Because Mesh Changed
+      Updating Mesh.                                                                     [ 15.65 s] [ 7809 MB]
+    Finished Updating Because Mesh Changed                                               [ 16.20 s] [ 7865 MB]
+    Currently Updating Because Mesh Changed
+      Updating Mesh.                                                                     [ 16.51 s] [ 7897 MB]
+    Finished Updating Because Mesh Changed                                               [ 17.02 s] [ 8043 MB]
+    Currently Initializing Equation Systems....................                          [109.73 s] [16723 MB]
+    Initializing Displaced Equation System.....                                          [ 34.89 s] [19438 MB]
+    Currently Updating Because Mesh Changed
+      Updating Mesh.                                                                     [ 16.57 s] [19446 MB]
+    Finished Updating Because Mesh Changed                                               [ 17.04 s] [19321 MB]
+  Finished Initializing                                                                  [195.00 s] [19321 MB]
+Finished Setting Up                                                                      [266.81 s] [19321 MB]
+Currently Executing
+  Performing Initial Setup
+    Finished Computing Max Dofs Per Element                                              [  6.18 s] [19321 MB]
+Framework Information:
+MOOSE Version:           git commit 8b05495ce0 on 2026-07-14
+LibMesh Version:         ab36c007ae608290e097bdfbc2766a46d8192b70
+PETSc Version:           3.25.2
+SLEPc Version:           3.25.0
+Libtorch Version:        2.12.0
+MFEM Version:            4.9.1
+Current Time:            Fri Jul 31 09:35:13 2026
+Executable Timestamp:    Tue Jul 14 18:06:24 2026
+
+Command Line Argument(s):
+  --color off
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh:
+  Parallel Type:           replicated
+  Mesh Dimension:          3
+  Spatial Dimension:       3
+  Nodes:                   2296940
+  Elems:                   10460986
+  Num Subdomains:          3
+
+Execution Information:
+  Executioner:             Steady
+  Solver Mode:             NEWTON
+  PETSc Preconditioner:    hypre boomeramg
+  MOOSE Preconditioner:    SMP (auto)
+
+    Projecting Initial Solutions............................................................................................................................... [646.61 s] [19324 MB]
+    Currently Setting Up Materials
+      Computing Initial Material Values...................................................................................................... [522.54 s] [19324 MB]
+    Finished Setting Up Materials                                                        [522.55 s] [19324 MB]
+    Finished Updating ActiveSemiLocalNode Range                                          [  5.55 s] [19324 MB]
+    Currently Updating ActiveSemiLocalNode Range                                         [  5.20 s] [19324 MB]
+  Still Performing Initial Setup.........................................................................................................................................................................................
+  Finished Performing Initial Setup                                                      [2122.85 s] [19325 MB]
+  Currently Outputting
+    Outputting Step........                                                              [ 47.50 s] [20989 MB]
+  Finished Outputting                                                                    [ 47.87 s] [20989 MB]
+
+Performing automatic scaling calculation
+
+
+    Computing Automatic Scaling
+      Computing Jacobian.............................................................................................................................................................................................................................................................. [1278.17 s] [20994 MB]
+    Finished Computing Automatic Scaling                                                 [1288.03 s] [20994 MB]
+
+    Computing Residual.................................................................  [333.45 s] [20998 MB]
+ 0 Nonlinear |R| = 2.776567e-08
+    Computing Jacobian............................................................................................................................................................................................................................................................................................................ [1511.77 s] [23154 MB]
+      0 Linear |R| = 2.776567e-08
+      1 Linear |R| = 2.423407e-08
+      2 Linear |R| = 2.322901e-08
+      3 Linear |R| = 2.057712e-08
+      4 Linear |R| = 2.055838e-08
+      5 Linear |R| = 2.055826e-08
+      6 Linear |R| = 2.055811e-08
+      7 Linear |R| = 2.055805e-08
+      8 Linear |R| = 2.055790e-08
+      9 Linear |R| = 2.055788e-08
+     10 Linear |R| = 2.055781e-08
+     11 Linear |R| = 2.055779e-08
+     12 Linear |R| = 2.055776e-08
+     13 Linear |R| = 2.055771e-08
+     14 Linear |R| = 2.055757e-08
+     15 Linear |R| = 2.055756e-08
+     16 Linear |R| = 2.055754e-08
+     17 Linear |R| = 2.055754e-08
+     18 Linear |R| = 2.055752e-08
+     19 Linear |R| = 2.055752e-08
+     20 Linear |R| = 2.055751e-08
+     21 Linear |R| = 2.055749e-08
+     22 Linear |R| = 2.055747e-08
+     23 Linear |R| = 2.055746e-08
+     24 Linear |R| = 2.055746e-08
+     25 Linear |R| = 2.055745e-08
+     26 Linear |R| = 2.055744e-08
+     27 Linear |R| = 2.055744e-08
+     28 Linear |R| = 2.055743e-08
+     29 Linear |R| = 2.055742e-08
+     30 Linear |R| = 2.051978e-08
+     31 Linear |R| = 2.051897e-08
+     32 Linear |R| = 2.051824e-08
+     33 Linear |R| = 2.051824e-08
+     34 Linear |R| = 2.051822e-08
+     35 Linear |R| = 2.051820e-08
+     36 Linear |R| = 2.051820e-08
+     37 Linear |R| = 2.051820e-08
+     38 Linear |R| = 2.051820e-08
+     39 Linear |R| = 2.051820e-08
+     40 Linear |R| = 2.051819e-08
+     41 Linear |R| = 2.051819e-08
+     42 Linear |R| = 2.051819e-08
+     43 Linear |R| = 2.051818e-08
+     44 Linear |R| = 2.051818e-08
+     45 Linear |R| = 2.051818e-08
+     46 Linear |R| = 2.051817e-08
+     47 Linear |R| = 2.051817e-08
+     48 Linear |R| = 2.051817e-08
+     49 Linear |R| = 2.051817e-08
+     50 Linear |R| = 2.051817e-08
+    Linear solve did not converge due to DIVERGED_ITS iterations 50
+
+    Computing Residual............................................................................... [405.61 s] [39789 MB]
+ 1 Nonlinear |R| = 2.051821e-08
+    Computing Jacobian......................................................................................................................................................................................................................................................................................................................... [1575.07 s] [39790 MB]
+      0 Linear |R| = 2.051821e-08
+      1 Linear |R| = 2.051821e-08
+      2 Linear |R| = 2.050522e-08
+      3 Linear |R| = 2.047063e-08
+      4 Linear |R| = 2.047052e-08
+      5 Linear |R| = 2.046935e-08
+      6 Linear |R| = 2.046930e-08
+      7 Linear |R| = 2.046929e-08
+      8 Linear |R| = 2.046922e-08
+      9 Linear |R| = 2.046920e-08
+     10 Linear |R| = 2.046915e-08
+     11 Linear |R| = 2.046913e-08
+     12 Linear |R| = 2.046908e-08
+     13 Linear |R| = 2.046903e-08
+     14 Linear |R| = 2.046902e-08
+     15 Linear |R| = 2.046900e-08
+     16 Linear |R| = 2.046898e-08
+     17 Linear |R| = 2.046894e-08
+     18 Linear |R| = 2.046892e-08
+     19 Linear |R| = 2.046891e-08
+     20 Linear |R| = 2.046890e-08
+     21 Linear |R| = 2.046890e-08
+     22 Linear |R| = 2.046889e-08
+     23 Linear |R| = 2.046886e-08
+     24 Linear |R| = 2.046886e-08
+     25 Linear |R| = 2.046886e-08
+     26 Linear |R| = 2.046885e-08
+     27 Linear |R| = 2.046885e-08
+     28 Linear |R| = 2.046884e-08
+     29 Linear |R| = 2.046883e-08
+     30 Linear |R| = 2.046749e-08
+     31 Linear |R| = 2.046749e-08
+     32 Linear |R| = 2.046748e-08
+     33 Linear |R| = 2.046748e-08
+     34 Linear |R| = 2.046747e-08
+     35 Linear |R| = 2.046747e-08
+     36 Linear |R| = 2.046747e-08
+     37 Linear |R| = 2.046747e-08
+     38 Linear |R| = 2.046747e-08
+     39 Linear |R| = 2.046747e-08
+     40 Linear |R| = 2.046747e-08
+     41 Linear |R| = 2.046747e-08
+     42 Linear |R| = 2.046746e-08
+     43 Linear |R| = 2.046746e-08
+     44 Linear |R| = 2.046746e-08
+     45 Linear |R| = 2.046746e-08
+     46 Linear |R| = 2.046746e-08
+     47 Linear |R| = 2.046746e-08
+     48 Linear |R| = 2.046746e-08
+     49 Linear |R| = 2.046746e-08
+     50 Linear |R| = 2.046746e-08
+    Linear solve did not converge due to DIVERGED_ITS iterations 50
+
+    Computing Residual.............................................................................. [399.36 s] [39794 MB]
+ 2 Nonlinear |R| = 2.046704e-08
+    Computing Jacobian.......................................................................................................................................................................................................................................................................................................................... [1577.07 s] [39794 MB]
+      0 Linear |R| = 2.046704e-08
+      1 Linear |R| = 2.046704e-08
+      2 Linear |R| = 2.046696e-08
+      3 Linear |R| = 2.046673e-08
+      4 Linear |R| = 2.046529e-08
+      5 Linear |R| = 1.893605e-08
+      6 Linear |R| = 1.891657e-08
+      7 Linear |R| = 1.870704e-08
+      8 Linear |R| = 1.863241e-08
+      9 Linear |R| = 1.863172e-08
+     10 Linear |R| = 1.862954e-08
+     11 Linear |R| = 1.862789e-08
+     12 Linear |R| = 1.862666e-08
+     13 Linear |R| = 1.862578e-08
+     14 Linear |R| = 1.862499e-08
+     15 Linear |R| = 1.862429e-08
+     16 Linear |R| = 1.862382e-08
+     17 Linear |R| = 1.862327e-08
+     18 Linear |R| = 1.862276e-08
+     19 Linear |R| = 1.862236e-08
+     20 Linear |R| = 1.862208e-08
+     21 Linear |R| = 1.862177e-08
+     22 Linear |R| = 1.862150e-08
+     23 Linear |R| = 1.862122e-08
+     24 Linear |R| = 1.862102e-08
+     25 Linear |R| = 1.862075e-08
+     26 Linear |R| = 1.862062e-08
+     27 Linear |R| = 1.862051e-08
+     28 Linear |R| = 1.862035e-08
+     29 Linear |R| = 1.862019e-08
+     30 Linear |R| = 1.844465e-08
+     31 Linear |R| = 1.844463e-08
+     32 Linear |R| = 1.844429e-08
+     33 Linear |R| = 1.844427e-08
+     34 Linear |R| = 1.844423e-08
+     35 Linear |R| = 1.844422e-08
+     36 Linear |R| = 1.844420e-08
+     37 Linear |R| = 1.844419e-08
+     38 Linear |R| = 1.844419e-08
+     39 Linear |R| = 1.844417e-08
+     40 Linear |R| = 1.844417e-08
+     41 Linear |R| = 1.844416e-08
+     42 Linear |R| = 1.844415e-08
+     43 Linear |R| = 1.844414e-08
+     44 Linear |R| = 1.844413e-08
+     45 Linear |R| = 1.844411e-08
+     46 Linear |R| = 1.844411e-08
+     47 Linear |R| = 1.844410e-08
+     48 Linear |R| = 1.844410e-08
+     49 Linear |R| = 1.844408e-08
+     50 Linear |R| = 1.844408e-08
+    Linear solve did not converge due to DIVERGED_ITS iterations 50
+
+    Computing Residual............................................................................. [396.35 s] [39797 MB]
+ 3 Nonlinear |R| = 1.845226e-08
+    Computing Jacobian......................................................................................................................................................................................................................................................................................................................... [1571.86 s] [39797 MB]
+      0 Linear |R| = 1.845226e-08
+      1 Linear |R| = 1.845226e-08
+      2 Linear |R| = 1.845109e-08
+      3 Linear |R| = 1.845058e-08
+      4 Linear |R| = 1.844999e-08
+      5 Linear |R| = 1.844998e-08
+      6 Linear |R| = 1.844997e-08
+      7 Linear |R| = 1.844997e-08
+      8 Linear |R| = 1.844997e-08
+      9 Linear |R| = 1.844997e-08
+     10 Linear |R| = 1.844997e-08
+     11 Linear |R| = 1.844997e-08
+     12 Linear |R| = 1.844996e-08
+     13 Linear |R| = 1.844996e-08
+     14 Linear |R| = 1.844996e-08
+     15 Linear |R| = 1.844995e-08
+     16 Linear |R| = 1.844995e-08
+     17 Linear |R| = 1.844995e-08
+     18 Linear |R| = 1.844995e-08
+     19 Linear |R| = 1.844994e-08
+     20 Linear |R| = 1.844994e-08
+     21 Linear |R| = 1.844993e-08
+     22 Linear |R| = 1.844992e-08
+     23 Linear |R| = 1.844992e-08
+     24 Linear |R| = 1.844992e-08
+     25 Linear |R| = 1.844992e-08
+     26 Linear |R| = 1.844992e-08
+     27 Linear |R| = 1.844992e-08
+     28 Linear |R| = 1.844991e-08
+     29 Linear |R| = 1.844991e-08
+     30 Linear |R| = 1.844964e-08
+     31 Linear |R| = 1.844964e-08
+     32 Linear |R| = 1.844964e-08
+     33 Linear |R| = 1.844964e-08
+     34 Linear |R| = 1.844963e-08
+     35 Linear |R| = 1.844963e-08
+     36 Linear |R| = 1.844963e-08
+     37 Linear |R| = 1.844963e-08
+     38 Linear |R| = 1.844963e-08
+     39 Linear |R| = 1.844963e-08
+     40 Linear |R| = 1.844963e-08
+     41 Linear |R| = 1.844963e-08
+     42 Linear |R| = 1.844963e-08
+     43 Linear |R| = 1.844962e-08
+     44 Linear |R| = 1.844962e-08
+     45 Linear |R| = 1.844962e-08
+     46 Linear |R| = 1.844962e-08
+     47 Linear |R| = 1.844961e-08
+     48 Linear |R| = 1.844961e-08
+     49 Linear |R| = 1.844961e-08
+     50 Linear |R| = 1.844961e-08
+    Linear solve did not converge due to DIVERGED_ITS iterations 50
+
+    Computing Residual.............................................................................. [398.46 s] [39794 MB]
+ 4 Nonlinear |R| = 1.845157e-08
+    Computing Jacobian........................................................................................................................................................................................................................................................................................................................ [1571.07 s] [39794 MB]
+      0 Linear |R| = 1.845157e-08
+      1 Linear |R| = 1.845157e-08
+      2 Linear |R| = 1.845157e-08
+      3 Linear |R| = 1.845157e-08
+      4 Linear |R| = 1.844989e-08
+      5 Linear |R| = 1.844983e-08
+      6 Linear |R| = 1.844982e-08
+      7 Linear |R| = 1.844981e-08
+      8 Linear |R| = 1.844980e-08
+      9 Linear |R| = 1.844979e-08
+     10 Linear |R| = 1.844979e-08
+     11 Linear |R| = 1.844978e-08
+     12 Linear |R| = 1.844978e-08
+     13 Linear |R| = 1.844978e-08
+     14 Linear |R| = 1.844978e-08
+     15 Linear |R| = 1.844978e-08
+     16 Linear |R| = 1.844978e-08
+     17 Linear |R| = 1.844978e-08
+     18 Linear |R| = 1.844977e-08
+     19 Linear |R| = 1.844976e-08
+     20 Linear |R| = 1.844976e-08
+     21 Linear |R| = 1.844976e-08
+     22 Linear |R| = 1.844976e-08
+     23 Linear |R| = 1.844975e-08
+     24 Linear |R| = 1.844975e-08
+     25 Linear |R| = 1.844975e-08
+     26 Linear |R| = 1.844975e-08
+     27 Linear |R| = 1.844975e-08
+     28 Linear |R| = 1.844974e-08
+     29 Linear |R| = 1.844974e-08
+     30 Linear |R| = 1.844951e-08
+     31 Linear |R| = 1.844951e-08
+     32 Linear |R| = 1.844951e-08
+     33 Linear |R| = 1.844951e-08
+     34 Linear |R| = 1.844950e-08
+     35 Linear |R| = 1.844950e-08
+     36 Linear |R| = 1.844950e-08
+     37 Linear |R| = 1.844950e-08
+     38 Linear |R| = 1.844950e-08
+     39 Linear |R| = 1.844949e-08
+     40 Linear |R| = 1.844949e-08
+     41 Linear |R| = 1.844949e-08
+     42 Linear |R| = 1.844949e-08
+     43 Linear |R| = 1.844949e-08
+     44 Linear |R| = 1.844949e-08
+     45 Linear |R| = 1.844949e-08
+     46 Linear |R| = 1.844948e-08
+     47 Linear |R| = 1.844947e-08
+     48 Linear |R| = 1.844947e-08
+     49 Linear |R| = 1.844947e-08
+     50 Linear |R| = 1.844947e-08
+    Linear solve did not converge due to DIVERGED_ITS iterations 50
+    
+  Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50
+ Solve Did NOT Converge!
+
+  Finished Solving                                                                       [122143.86 s] [23382 MB]
+Aborting as solve did not converge
+Finished Executing                                                                       [124317.00 s] [23382 MB]

@@ -37,3 +37,9 @@ Execution Information:
   TimeIntegrator:          ImplicitEuler
   Solver Mode:             NEWTON
   MOOSE Preconditioner:    SMP (auto)
+
+Time Step 0, time = 0
+
+Time Step 1, time = 1, dt = 1
+ 0 Nonlinear |R| = 1.568125e+02
+      0 Linear |R| = 1.568125e+02

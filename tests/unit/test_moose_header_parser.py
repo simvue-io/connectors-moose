@@ -17,7 +17,9 @@ def mock_moose_process(self, *_, **__):
     def create_header(self):
         shutil.copy(
             pathlib.Path(__file__).parent.joinpath("example_data", "moose_header.txt"),
-            pathlib.Path(self._output_dir_path).joinpath(f"{self._results_prefix}.txt"),
+            pathlib.Path(self._output_dir_path).joinpath(
+                f"{self.name}_moose_simulation.out"
+            ),
         )
         time.sleep(1)
         self._trigger.set()
@@ -29,7 +31,7 @@ def mock_moose_process(self, *_, **__):
 @patch.object(MooseRun, "_moose_input_parser", lambda *_, **__: {})
 @patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_moose_process)
-def test_moose_header_parser(folder_setup):
+def test_moose_header_parser(folder_setup, monkeypatch):
     """
     Check information from header of MOOSE log is correctly uploaded as metadata
     """
@@ -44,6 +46,8 @@ def test_moose_header_parser(folder_setup):
         run._output_dir_path = pathlib.Path(temp_dir.name)
         run._results_prefix = "moose_test"
 
+        # Move into tempdir, since .out file is written to cwd
+        monkeypatch.chdir(run._output_dir_path)
         run.launch(
             moose_application_path=pathlib.Path(__file__),
             moose_file_path=pathlib.Path(__file__),

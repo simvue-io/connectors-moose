@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import simvue
 import uuid
+import shutil
 from simvue_moose.connector import MooseRun
 from simvue.sender import Sender
 from simvue.api.objects import GridMetrics
@@ -15,67 +16,66 @@ MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
 def run_moose(
     moose_file_path: pathlib.Path,
     load_results_dir,
+    workdir_path,
     offline,
     parallel,
     load,
     moose_app_path,
 ) -> None:
 
-    # Create a temp dir to contain results, and replace path in file
-    with tempfile.TemporaryDirectory() as tempd:
-        # Initialise the MooseRun class as a context manager
-        with MooseRun(mode="offline" if offline else "online") as run:
-            # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
-            run.init(
-                name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
-                description="An example of using the MooseRun Connector to track a MOOSE simulation.",
-                folder="/test-moose",
-                tags=["moose", "thermal", "diffusion"],
-                retention_period="1 hour",
+    # Initialise the MooseRun class as a context manager
+    with MooseRun(mode="offline" if offline else "online") as run:
+        # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
+        run.init(
+            name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
+            description="An example of using the MooseRun Connector to track a MOOSE simulation.",
+            folder="/test-moose",
+            tags=["moose", "thermal", "diffusion"],
+            retention_period="1 hour",
+        )
+
+        # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
+        run.create_metric_threshold_alert(
+            name="avg_temp_above_500",
+            metric="average_temperature",
+            rule="is above",
+            threshold=500.0,
+            frequency=1,
+            window=1,
+        )
+
+        if load:
+            run.load(
+                moose_file_path=moose_file_path,
+                results_dir=load_results_dir,
+                # You can optionally choose to track VectorPostProcessor outputs too:
+                track_vector_postprocessors=True,
+            )
+        else:
+            # Then call the .launch() method to start your MOOSE simulation
+            run.launch(
+                moose_application_path=moose_app_path,
+                moose_file_path=moose_file_path,
+                workdir_path=workdir_path,
+                # You can optionally choose to track VectorPostProcessor outputs too:
+                track_vector_postprocessors=True,
+                # And you can choose whether to run it in parallel
+                run_in_parallel=parallel,
+                num_processors=2,
+                mpiexec_env_vars={"allow-run-as-root": True},
             )
 
-            # You can use any of the Simvue Run() methods to upload extra information before/after the simulation
-            run.create_metric_threshold_alert(
-                name="avg_temp_above_500",
-                metric="average_temperature",
-                rule="is above",
-                threshold=500.0,
-                frequency=1,
-                window=1,
-            )
+        # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
+        run.log_event("Deleting local copies of results...")
 
-            if load:
-                run.load(
-                    moose_file_path=moose_file_path,
-                    results_dir=load_results_dir,
-                    # You can optionally choose to track VectorPostProcessor outputs too:
-                    track_vector_postprocessors=True,
-                )
-            else:
-                # Then call the .launch() method to start your MOOSE simulation
-                run.launch(
-                    moose_application_path=moose_app_path,
-                    moose_file_path=moose_file_path,
-                    workdir_path=pathlib.Path(tempd),
-                    # You can optionally choose to track VectorPostProcessor outputs too:
-                    track_vector_postprocessors=True,
-                    # And you can choose whether to run it in parallel
-                    run_in_parallel=parallel,
-                    num_processors=2,
-                    mpiexec_env_vars={"allow-run-as-root": True},
-                )
+        run_id = run.id
 
-            # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
-            run.log_event("Deleting local copies of results...")
+    if offline:
+        sender = Sender(throw_exceptions=True)
+        sender.upload()
+        run_id = sender._id_mapping.get(run_id)
 
-            run_id = run.id
-
-        if offline:
-            sender = Sender(throw_exceptions=True)
-            sender.upload()
-            run_id = sender._id_mapping.get(run_id)
-
-        return run_id
+    return run_id
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
@@ -91,19 +91,21 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     if load:
         if parallel:
             pytest.skip("Parallel has no effect when loading from historic runs")
-
-    run_id = run_moose(
-        moose_file_path=pathlib.Path(__file__).parent.joinpath(
-            "example_data", "thermal_bar.i"
-        ),
-        load_results_dir=pathlib.Path(__file__).parent.joinpath(
-            "example_data", "results"
-        ),
-        offline=offline,
-        parallel=parallel,
-        load=load,
-        moose_app_path=MOOSE_APP_PATH,
-    )
+        # Create a temp dir to contain results
+    with tempfile.TemporaryDirectory() as tempd:
+        run_id = run_moose(
+            moose_file_path=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "thermal_bar.i"
+            ),
+            load_results_dir=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "thermal_bar_results"
+            ),
+            workdir_path=pathlib.Path(tempd),
+            offline=offline,
+            parallel=parallel,
+            load=load,
+            moose_app_path=MOOSE_APP_PATH,
+        )
 
     client = simvue.Client()
     run_data = client.get_run(run_id)
@@ -182,6 +184,97 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         assert pathlib.Path(temp_dir).joinpath("simvue_thermal.e").exists()
 
 
+@pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
+@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
+@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
+def test_moose_steady(offline, parallel, load, offline_cache_setup):
+    try:
+        subprocess.run(MOOSE_APP_PATH)
+    except FileNotFoundError:
+        pytest.skip(
+            "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
+        )
+    if load:
+        if parallel:
+            pytest.skip("Parallel has no effect when loading from historic runs")
+
+        # Create a temp dir to contain results
+    with tempfile.TemporaryDirectory() as tempd:
+        # Need to make a copy of the input file into the workdir
+        # Because file_base not specified, so will make results relative to input file
+        shutil.copy(
+            pathlib.Path(__file__).parent.joinpath("example_data", "diffusion.i"),
+            pathlib.Path(tempd).joinpath("diffusion.i"),
+        )
+        run_id = run_moose(
+            moose_file_path=pathlib.Path(tempd).joinpath("diffusion.i"),
+            load_results_dir=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "diffusion_results"
+            ),
+            workdir_path=None,
+            offline=offline,
+            parallel=parallel,
+            load=load,
+            moose_app_path=MOOSE_APP_PATH,
+        )
+
+    client = simvue.Client()
+    run_data = client.get_run(run_id)
+    events = [event["message"] for event in client.get_events(run_id)]
+
+    # Check run description and tags from init have been added
+    assert (
+        run_data.description
+        == "An example of using the MooseRun Connector to track a MOOSE simulation."
+    )
+    assert run_data.tags == ["moose", "thermal", "diffusion"]
+
+    # Check alert has been added
+    assert "avg_temp_above_500" in [
+        alert["name"] for alert in run_data.get_alert_details()
+    ]
+
+    # Check metadata from MOOSE log header has been uploaded
+    assert run_data.metadata["moose"]["executioner"] == "Steady"
+
+    if parallel:
+        assert run_data.metadata["moose"]["num_processors"] == "2"
+    else:
+        assert run_data.metadata["moose"]["num_processors"] == "1"
+
+    # Check metadata from MOOSE input file has been uploaded
+    assert (
+        run_data.metadata["diffusion"]["Postprocessors"]["left"]["type"]
+        == "SideAverageValue"
+    )
+    assert run_data.metadata["diffusion"]["GlobalParams"]["diffusivity"] == 1
+
+    # Check events uploaded from log
+    assert "Beginning Nonlinear Iteration 1" in events
+    assert " Solve Converged!" in events
+    assert " Total Nonlinear Iterations: 3." in events
+
+    # Check metrics uploaded from PostProcessor CSV
+    metrics = dict(run_data.metrics)
+    assert metrics["bottom"]["max"] > 0.49
+
+    # Check residuals metrics uploaded from log file
+    assert metrics.get("linear_iteration_residuals")
+    assert metrics.get("nonlinear_iteration_residuals")
+
+    assert metrics["linear_iteration_residuals"]["count"] > 200
+    assert metrics["nonlinear_iteration_residuals"]["count"] > 2
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input file uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("diffusion.i").exists()
+
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("diffusion_csv.csv").exists()
+
+
 @pytest.mark.parametrize(
     "file_base",
     (None, "relative", "absolute"),
@@ -253,32 +346,26 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
         if file_base == "absolute":
             # Should be in tempd with prefix simvue_absolute
             assert (
-                pathlib.Path(tempd).joinpath("absolute", "simvue_thermal.txt").exists()
+                pathlib.Path(tempd).joinpath("absolute", "simvue_thermal.csv").exists()
             )
         elif file_base == "relative":
             # Should be in folder test_results, relative to working dir if specified, with simvue_thermal prefix
             if workdir_path:
                 assert (
                     pathlib.Path(tempd)
-                    .joinpath("my_results", "test_results", "simvue_thermal.txt")
+                    .joinpath("my_results", "test_results", "simvue_thermal.csv")
                     .exists()
                 )
             else:
                 assert (
                     pathlib.Path(tempd)
-                    .joinpath("test_results", "simvue_thermal.txt")
+                    .joinpath("test_results", "simvue_thermal.csv")
                     .exists()
                 )
         else:
             # Files given default names, starting with name of input file
-            if workdir_path:
-                assert (
-                    pathlib.Path(tempd)
-                    .joinpath("my_results", "thermal_bar_console.txt")
-                    .exists()
-                )
-            else:
-                assert pathlib.Path(tempd).joinpath("thermal_bar_console.txt").exists()
+            # Always puts in parent dir of input file, regardless of working dir
+            assert pathlib.Path(tempd).joinpath("thermal_bar_out.csv").exists()
 
     # Change current working directory back to normal
     monkeypatch.chdir(original_cwd)
