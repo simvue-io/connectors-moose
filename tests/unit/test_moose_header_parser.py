@@ -56,9 +56,20 @@ def test_moose_header_parser(folder_setup, monkeypatch):
         client = simvue.Client()
         metadata = client.get_run(run_id).metadata
         # Check that keys and values parsed correctly
-        assert metadata.get("moose").get("num_processors") == "1"
-        assert metadata.get("moose").get("moose_preconditioner") == "SMP (auto)"
+        assert (
+            metadata.get("moose", {}).get("parallelism", {}).get("num_processors")
+            == "1"
+        )
+        assert (
+            metadata.get("moose", {})
+            .get("execution_information", {})
+            .get("moose_preconditioner")
+            == "SMP (auto)"
+        )
 
-        # Check that entries with no values are not added
-        assert metadata.get("libmesh_version") == None
-        assert metadata.get("mesh") == None
+        # Check that headers are not recorded as metadata
+        assert isinstance(metadata.get("moose", {}).get("mesh"), dict)
+        assert metadata.get("moose", {}).get("mesh", {}).get("mesh") is None
+
+        # Check that headers without key:value pairs underneath are not recorded
+        assert not any("command_line" in key for key in metadata.get("moose"))
