@@ -291,7 +291,24 @@ class MooseRun(WrappedRun):
 
     def _log_parser(
         self, file_content: str, **__
-    ) -> tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]:
+    ) -> tuple[dict[str, typing.Any], dict[str, list[str]]]:
+        """Parse each line from the log file.
+
+        Parameters
+        ----------
+        file_content : str
+            A collection of lines from the log file
+        **__
+            Additional unused keyword arguments
+
+        Returns
+        -------
+        dict[str, typing.Any]
+            Unused dictionary of metadata
+        dict[str, list[str]]
+           Dictionary containing a list of lines to process
+
+        """
         return {}, {"lines": file_content.splitlines()}
 
     def _log_callback(self, data: dict[str, list[str]], _: dict[str, str]) -> None:
@@ -833,11 +850,8 @@ class MooseRun(WrappedRun):
 
         if log_path and log_path.exists():
             # Parse line by line, matching regex patterns, upload as Events if found
-            with open(log_path) as file:
-                file_lines = file.readlines()
-
-                for line in file_lines:
-                    self._log_parser(line)
+            meta, data = self._log_parser(log_path.read_text())
+            self._log_callback(data, meta)
 
         scalar_csv_paths = list(
             self._output_dir_path.glob(f"{self._results_prefix}.csv")
