@@ -49,7 +49,7 @@ with MooseRun() as run:
         results_dir=pathlib.Path(__file__).parent.joinpath("results"),
         # Optionally choose which files to upload, by default uploads all results
         # upload_files = ["simvue_thermal.e"]
-        # Can choose to enable upload of 'miscellanous' log messages as Events
+        # Can choose to enable upload of 'miscellaneous' log messages as Events
         upload_miscellaneous_logs=True,
         # You can optionally choose to track VectorPostProcessor outputs:
         track_vector_postprocessors=True,
