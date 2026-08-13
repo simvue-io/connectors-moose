@@ -65,7 +65,9 @@ with MooseRun() as run:
     run.launch(
         moose_application_path=MOOSE_APP_PATH,
         moose_file_path=pathlib.Path(__file__).parent.joinpath("thermal_bar.i"),
-        # Optionally choose which files to upload:
+        # Optionally choose which files to upload
+        # Default is None, which means upload all files, or provide list of file names.
+        upload_files=None,
         # You can optionally choose to track VectorPostProcessor outputs:
         track_vector_postprocessors=True,
         # Can choose to enable upload of 'miscellanous' log messages as Events
