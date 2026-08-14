@@ -19,13 +19,21 @@ Parallelism:
   Num Processors:          1
   Num Threads:             1
 
-Mesh:
+Mesh: 
   Parallel Type:           replicated
   Mesh Dimension:          3
   Spatial Dimension:       3
-  Nodes:                   9261
-  Elems:                   8000
-  Num Subdomains:          1
+  Nodes:                   
+    Total:                 2296940
+    Local:                 574477
+    Min/Max/Avg:           563224/584064/574235
+  Elems:                   
+    Total:                 10460986
+    Local:                 2615247
+    Min/Max/Avg:           2615246/2615247/2615246
+  Num Subdomains:          3
+  Num Partitions:          4
+  Partitioner:             metis
 
 Nonlinear System:
   Num DOFs:                9261
@@ -36,7 +44,7 @@ Nonlinear System:
 
 Execution Information:
   Executioner:             Transient
-  TimeStepper:             ConstantDT
+  TimeStepper:             
   TimeIntegrator:          ImplicitEuler
   Solver Mode:             NEWTON
   MOOSE Preconditioner:    SMP (auto)

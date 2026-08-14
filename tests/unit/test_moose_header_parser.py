@@ -57,14 +57,28 @@ def test_moose_header_parser(folder_setup, monkeypatch):
         metadata = client.get_run(run_id).metadata
         # Check that keys and values parsed correctly
         assert (
-            metadata.get("moose", {}).get("parallelism", {}).get("num_processors")
-            == "1"
+            metadata.get("moose", {}).get("parallelism", {}).get("num_processors") == 1
         )
         assert (
             metadata.get("moose", {})
             .get("execution_information", {})
             .get("moose_preconditioner")
             == "SMP (auto)"
+        )
+        # Check framework information recorded as top level keys
+        assert metadata.get("moose", {}).get("petsc_version") == "3.20.3"
+
+        # Check double indentation of mesh info
+        assert (
+            metadata.get("moose", {}).get("mesh", {}).get("nodes", {}).get("total")
+            == 2296940
+        )
+        assert (
+            metadata.get("moose", {}).get("mesh", {}).get("elems", {}).get("total")
+            == 10460986
+        )
+        assert (
+            metadata.get("moose", {}).get("mesh", {}).get("partitioner", {}) == "metis"
         )
 
         # Check that headers are not recorded as metadata
@@ -73,3 +87,7 @@ def test_moose_header_parser(folder_setup, monkeypatch):
 
         # Check that headers without key:value pairs underneath are not recorded
         assert not any("command_line" in key for key in metadata.get("moose"))
+        assert "libmesh_version" not in metadata.get("moose")
+
+        # Check missing values don't break indentation
+        assert len(metadata.get("moose", {}).get("execution_information")) == 4

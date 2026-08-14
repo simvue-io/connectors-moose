@@ -116,7 +116,7 @@ class MooseRun(WrappedRun):
         self._steady = False
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
-        self._log_header_key: str | None = None
+        self._log_header_keys: list[tuple[int, str]] | None = None
         self._postprocessor_block = False
         self._header_metadata = defaultdict(dict)
 
@@ -265,6 +265,11 @@ class MooseRun(WrappedRun):
     def _log_header_parser(self, line: str) -> None:
         """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
 
+        Note that this is designed to handle data where a header is followed by an indented block of key:value pairs.
+        Non header values with missing values will therefore be disregarded
+        (recorded as a header, but then immediately removed on the next iteration due to same indent level)
+        Keys under 'Framework Information' will therefore be recorded as top level keys.
+
         Parameters
         ----------
         line : str
@@ -276,6 +281,8 @@ class MooseRun(WrappedRun):
         if not line.strip() or ":" not in line:
             return
 
+        indent = len(line) - len(line.lstrip())
+
         key, value = line.split(":", 1)
         key = key.strip()
         value = value.strip()
@@ -284,12 +291,29 @@ class MooseRun(WrappedRun):
         key = key.replace(" ", "_").lower()
         key = re.sub(r"[^\w\-\s\.]+", "-", key)
 
-        # Corresponds to a title - set log header key
+        # Find last recorded key which has less indentation than the current value
+        while self._log_header_keys and self._log_header_keys[-1][0] >= indent:
+            self._log_header_keys.pop()
+
+        # Corresponds to a title - set log header key and level of indentation
         if not value:
-            self._log_header_key = key
+            self._log_header_keys.append((indent, key))
             return
 
-        self._header_metadata[self._log_header_key][key] = value
+        # Try to cast strings to number
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+
+        # Set list of log header keys as nested dict keys
+        # Then set final key:value pair as normal
+        reduce(
+            lambda d, key: d.setdefault(key, {}),
+            [item[1] for item in self._log_header_keys],
+            self._header_metadata,
+        )[key] = value
+
         return
 
     def _log_parser(
@@ -325,7 +349,9 @@ class MooseRun(WrappedRun):
         """
         for line in data["lines"]:
             # First, check if we are inside the framework information header
-            if "Framework Information:" in line or self._log_header_key:
+            if "Framework Information:" in line:
+                self._log_header_keys = []
+            if self._log_header_keys is not None:
                 self._log_header_parser(line)
 
             if "Postprocessor Values:" in line:
@@ -347,8 +373,8 @@ class MooseRun(WrappedRun):
                 # There is no way to reliably define when we are at the end of the header to extract metadata from
                 # So we will check against our other log patterns each time, and if one matches, we must be at the end
                 # So disable framework header parsing, update metadata, check for static solve
-                if self._log_header_key:
-                    self._log_header_key = None
+                if self._log_header_keys is not None:
+                    self._log_header_keys = None
                     self.update_metadata({"moose": self._header_metadata})
 
                     # Check if static solve, in case not found in input file
@@ -678,7 +704,7 @@ class MooseRun(WrappedRun):
     def _post_simulation(self):
         """Upload information to Simvue after the MOOSE simulation finishes."""
         # If only header information logged, and then MOOSE stops, still want to upload this info
-        if self._log_header_key and self._header_metadata:
+        if self._log_header_keys is not None and self._header_metadata:
             self.update_metadata({"moose": self._header_metadata})
 
         if self.upload_files is None:
