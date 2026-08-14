@@ -1,5 +1,12 @@
 Time Step 0, time = 0
 
+Postprocessor Values:
++----------------+----------------+----------------+----------------+----------------+----------------+
+| time           | bottom         | left           | right          | symmetric      | top            |
++----------------+----------------+----------------+----------------+----------------+----------------+
+|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |
++----------------+----------------+----------------+----------------+----------------+----------------+
+
 Time Step 1, time = 1, dt = 1
  0 Nonlinear |R| = 1.568125e+02
       0 Linear |R| = 1.568125e+02
@@ -232,7 +239,7 @@ Time Step 2, time = 2, dt = 1
  Solve Converged!
 
 *** Warning ***
-/home/wk9874/Documents/simvue/integrations/workspace/copper_mug.i:131.5:
+/home/workspace/copper_mug.i:131.5:
 The following warning occurred in the UserObject 'handle-too-hot' of type Terminator.
 
 Terminator 'handle-too-hot' is causing the execution to terminate.

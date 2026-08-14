@@ -94,6 +94,7 @@ class MooseRun(WrappedRun):
         self.moose_file_path: pydantic.FilePath = None
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
+        self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
         self.moose_cli_options: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
@@ -115,6 +116,7 @@ class MooseRun(WrappedRun):
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
         self._framework_info_header = False
+        self._postprocessor_block = False
         self._header_metadata = {}
 
         super().__init__(
@@ -289,30 +291,52 @@ class MooseRun(WrappedRun):
 
     def _log_parser(
         self, file_content: str, **__
-    ) -> tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]:
-        """Parse a MOOSE log file line by line as it is written, and extract relevant information.
+    ) -> tuple[dict[str, typing.Any], dict[str, list[str]]]:
+        """Parse each line from the log file.
 
         Parameters
         ----------
         file_content : str
-            The next line of the log file
+            A collection of lines from the log file
         **__
             Additional unused keyword arguments
 
         Returns
         -------
-        tuple[dict[str, typing.Any], list[dict[str, typing.Any]]]
-            An (empty) dictionary of metadata, and a dictionary of metrics data extracted from the log
+        dict[str, typing.Any]
+            Unused dictionary of metadata
+        dict[str, list[str]]
+           Dictionary containing a list of lines to process
 
         """
-        for line in file_content.split("\n"):
+        return {}, {"lines": file_content.splitlines()}
+
+    def _log_callback(self, data: dict[str, list[str]], _: dict[str, str]) -> None:
+        """Extract relevant information from each line in log file and upload.
+
+        Parameters
+        ----------
+        data: dict[str, list[str]]
+            Lines from the log file since last read
+
+        """
+        for line in data["lines"]:
             # First, check if we are inside the framework information header
             if "Framework Information:" in line:
                 self._framework_info_header = True
                 continue
+            if "Postprocessor Values:" in line:
+                self._postprocessor_block = True
+                continue
 
             if self._framework_info_header:
                 self._framework_header_parser(line)
+
+            if self._postprocessor_block:
+                if not line.strip():
+                    # Empty line at end of postprocessor table
+                    self._postprocessor_block = False
+                continue
 
             # Look for relevant keys in the dictionary of data which we are passed in, and log the event with Simvue
             for name, pattern in self._patterns.items():
@@ -392,8 +416,14 @@ class MooseRun(WrappedRun):
                         ]
                     )
                 break
+            else:
+                # No pattern matched, and not in PostProcessor block, upload line as event
+                # Note there is no reliable way to tell when a header block has ended and a misc log has begun
+                # Since header info is only printed once, will also upload this as Events
+                # So that misc log lines between header and solve beginning are not missed
+                if self.upload_miscellaneous_logs and line.strip():
+                    self.log_event(line)
 
-        return {}, {}
 
     @mp_file_parser.file_parser
     def _vector_postprocessor_parser(
@@ -619,8 +649,7 @@ class MooseRun(WrappedRun):
         self.file_monitor.tail(
             path_glob_exprs=f"{self.name}_moose_simulation.out",
             parser_func=mp_tail_parser.log_parser(self._log_parser),
-            # tracked_values=list(self._patterns.values()),
-            # labels=list(self._patterns.keys()),
+            callback=self._log_callback,
         )
         # Monitor each line added to the MOOSE results file as the simulation proceeds, and upload results to Simvue
         self.file_monitor.tail(
@@ -673,6 +702,7 @@ class MooseRun(WrappedRun):
         moose_file_path: pydantic.FilePath,
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
+        upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
         moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
@@ -703,6 +733,9 @@ class MooseRun(WrappedRun):
             Results should be supplied relative to the output directory provided in the MOOSE file,
             and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        upload_miscellaneous_logs : bool, optional
+            Whether to upload any lines from the console log which have not been otherwise handled as Events, by default False
+            Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
         moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
@@ -721,6 +754,7 @@ class MooseRun(WrappedRun):
         self.moose_file_path = moose_file_path
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
+        self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self.moose_cli_options = moose_cli_options or {}
         self.run_in_parallel = run_in_parallel
@@ -737,6 +771,7 @@ class MooseRun(WrappedRun):
         results_dir: pydantic.DirectoryPath | None = None,
         log_path: pydantic.FilePath | None = None,
         upload_files: list[str] | None = None,
+        upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
     ):
         """Command to load a set of results from a MOOSE simulation into Simvue.
@@ -757,6 +792,9 @@ class MooseRun(WrappedRun):
             Results should be supplied relative to the output directory provided in the MOOSE file,
             and/or specify the name of the input file.
             If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        upload_miscellaneous_logs : bool, optional
+            Whether to upload any lines from the console log which have not been otherwise handled as Events, by default False
+            Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
 
@@ -770,6 +808,7 @@ class MooseRun(WrappedRun):
         """
         self.moose_file_path = moose_file_path
         self.upload_files = upload_files
+        self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self._loading_historic_run = True
 
@@ -810,11 +849,8 @@ class MooseRun(WrappedRun):
 
         if log_path and log_path.exists():
             # Parse line by line, matching regex patterns, upload as Events if found
-            with open(log_path) as file:
-                file_lines = file.readlines()
-
-                for line in file_lines:
-                    self._log_parser(line)
+            meta, data = self._log_parser(log_path.read_text())
+            self._log_callback(data, meta)
 
         scalar_csv_paths = list(
             self._output_dir_path.glob(f"{self._results_prefix}.csv")

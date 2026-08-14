@@ -47,10 +47,12 @@ with MooseRun() as run:
         # Provide path to input file, making sure it has a file base pointing to your results directory
         moose_file_path=pathlib.Path(__file__).parent.joinpath("thermal_bar.i"),
         results_dir=pathlib.Path(__file__).parent.joinpath("results"),
-        # You can optionally choose to track VectorPostProcessor outputs too:
-        track_vector_postprocessors=True,
         # Optionally choose which files to upload, by default uploads all results
         # upload_files = ["simvue_thermal.e"]
+        # Can choose to enable upload of 'miscellaneous' log messages as Events
+        upload_miscellaneous_logs=True,
+        # You can optionally choose to track VectorPostProcessor outputs:
+        track_vector_postprocessors=True,
     )
 
     # Once the simulation is complete, you can upload any final items to the Simvue run before it closes
