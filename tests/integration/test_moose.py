@@ -128,12 +128,15 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
     ]
 
     # Check metadata from MOOSE log header has been uploaded
-    assert run_data.metadata["moose"]["executioner"] == "Transient"
+    assert (
+        run_data.metadata["moose"]["execution_information"]["executioner"]
+        == "Transient"
+    )
 
     if parallel:
-        assert run_data.metadata["moose"]["num_processors"] == "2"
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
     else:
-        assert run_data.metadata["moose"]["num_processors"] == "1"
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
 
     # Check metadata from MOOSE input file has been uploaded
     assert (
@@ -249,12 +252,14 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
     ]
 
     # Check metadata from MOOSE log header has been uploaded
-    assert run_data.metadata["moose"]["executioner"] == "Steady"
+    assert (
+        run_data.metadata["moose"]["execution_information"]["executioner"] == "Steady"
+    )
 
     if parallel:
-        assert run_data.metadata["moose"]["num_processors"] == "2"
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
     else:
-        assert run_data.metadata["moose"]["num_processors"] == "1"
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
 
     # Check metadata from MOOSE input file has been uploaded
     assert (
@@ -405,9 +410,12 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
     assert run_data.tags == ["moose", "thermal", "diffusion"]
 
     # Check metadata from MOOSE log header has been uploaded
-    assert run_data.metadata["moose"]["executioner"] == "Transient"
+    assert (
+        run_data.metadata["moose"]["execution_information"]["executioner"]
+        == "Transient"
+    )
 
-    assert run_data.metadata["moose"]["num_processors"] == "1"
+    assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
 
     # Check metadata from MOOSE input file has been uploaded
     assert (

@@ -115,7 +115,7 @@ class MooseRun(WrappedRun):
         self._steady = False
         self._unsupported_vectors: list[str] = []
         self._loading_historic_run = False
-        self._framework_info_header = False
+        self._log_header_keys: list[tuple[int, str]] | None = None
         self._postprocessor_block = False
         self._header_metadata = {}
 
@@ -261,8 +261,13 @@ class MooseRun(WrappedRun):
 
         self.update_metadata({self.moose_file_path.stem: input_metadata})
 
-    def _framework_header_parser(self, line: str) -> None:
+    def _log_header_parser(self, line: str) -> None:
         """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
+
+        Note that this is designed to handle data where a header is followed by an indented block of key:value pairs.
+        Non header values with missing values will therefore be disregarded
+        (recorded as a header, but then immediately removed on the next iteration due to same indent level)
+        Keys under 'Framework Information' will therefore be recorded as top level keys.
 
         Parameters
         ----------
@@ -275,18 +280,39 @@ class MooseRun(WrappedRun):
         if not line.strip() or ":" not in line:
             return
 
-        key, value = line.split(":", 1)
-        value = value.strip()
-        # Ignore lines which correspond to 'titles'
-        if not value:
-            return
+        indent = len(line) - len(line.lstrip())
 
+        key, value = line.split(":", 1)
         key = key.strip()
-        key = key.replace(" ", "_").lower()
+        value = value.strip()
+
         # Replace any characters which will fail server side validation of key name with dashes
+        key = key.replace(" ", "_").lower()
         key = re.sub(r"[^\w\-\s\.]+", "-", key)
 
-        self._header_metadata[key] = value
+        # Find last recorded key which has less indentation than the current value
+        while self._log_header_keys and self._log_header_keys[-1][0] >= indent:
+            self._log_header_keys.pop()
+
+        # Corresponds to a title - set log header key and level of indentation
+        if not value:
+            self._log_header_keys.append((indent, key))
+            return
+
+        # Try to cast strings to number
+        try:
+            value = float(value)
+        except ValueError:
+            pass
+
+        # Set list of log header keys as nested dict keys
+        # Then set final key:value pair as normal
+        reduce(
+            lambda d, key: d.setdefault(key, {}),
+            [item[1] for item in self._log_header_keys],
+            self._header_metadata,
+        )[key] = value
+
         return
 
     def _log_parser(
@@ -323,14 +349,13 @@ class MooseRun(WrappedRun):
         for line in data["lines"]:
             # First, check if we are inside the framework information header
             if "Framework Information:" in line:
-                self._framework_info_header = True
-                continue
+                self._log_header_keys = []
+            if self._log_header_keys is not None:
+                self._log_header_parser(line)
+
             if "Postprocessor Values:" in line:
                 self._postprocessor_block = True
                 continue
-
-            if self._framework_info_header:
-                self._framework_header_parser(line)
 
             if self._postprocessor_block:
                 if not line.strip():
@@ -347,12 +372,17 @@ class MooseRun(WrappedRun):
                 # There is no way to reliably define when we are at the end of the header to extract metadata from
                 # So we will check against our other log patterns each time, and if one matches, we must be at the end
                 # So disable framework header parsing, update metadata, check for static solve
-                if self._framework_info_header:
-                    self._framework_info_header = False
+                if self._log_header_keys is not None:
+                    self._log_header_keys = None
                     self.update_metadata({"moose": self._header_metadata})
 
                     # Check if static solve, in case not found in input file
-                    if self._header_metadata.get("executioner", "").lower() == "steady":
+                    if (
+                        self._header_metadata.get("execution_information", {})
+                        .get("executioner", "")
+                        .lower()
+                        == "steady"
+                    ):
                         self._steady = True
 
                 if name == "time_step":
@@ -423,7 +453,6 @@ class MooseRun(WrappedRun):
                 # So that misc log lines between header and solve beginning are not missed
                 if self.upload_miscellaneous_logs and line.strip():
                     self.log_event(line)
-
 
     @mp_file_parser.file_parser
     def _vector_postprocessor_parser(
@@ -672,7 +701,7 @@ class MooseRun(WrappedRun):
     def _post_simulation(self):
         """Upload information to Simvue after the MOOSE simulation finishes."""
         # If only header information logged, and then MOOSE stops, still want to upload this info
-        if self._framework_info_header and self._header_metadata:
+        if self._log_header_keys is not None and self._header_metadata:
             self.update_metadata({"moose": self._header_metadata})
 
         if self.upload_files is None:
