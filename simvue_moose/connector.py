@@ -10,7 +10,6 @@ import re
 import shutil
 import time
 import typing
-from collections import defaultdict
 from functools import reduce
 from itertools import islice
 
@@ -118,7 +117,7 @@ class MooseRun(WrappedRun):
         self._loading_historic_run = False
         self._log_header_keys: list[tuple[int, str]] | None = None
         self._postprocessor_block = False
-        self._header_metadata = defaultdict(dict)
+        self._header_metadata = {}
 
         super().__init__(
             mode=mode,
