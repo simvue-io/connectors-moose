@@ -455,8 +455,6 @@ class MooseRun(WrappedRun):
                 if self.upload_miscellaneous_logs and line.strip():
                     self.log_event(line)
 
-        return {}, {}
-
     @mp_file_parser.file_parser
     def _vector_postprocessor_parser(
         self,
