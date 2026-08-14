@@ -91,7 +91,7 @@ class MooseRun(WrappedRun):
 
         """
         self.moose_application_path: pydantic.FilePath = None
-        self.moose_file_path: pydantic.FilePath = None
+        self.moose_file_paths: list[pydantic.FilePath] = None
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
@@ -154,7 +154,8 @@ class MooseRun(WrappedRun):
                     "Warning: No file_base specified in MOOSE file - results will be generated in parent directory of input file."
                 )
             # Uses directory containing input file, with moose file name stem as prefix
-            return self.moose_file_path.parent, self.moose_file_path.stem
+            # If multiple files provided, uses last one
+            return self.moose_file_paths[-1].parent, self.moose_file_paths[-1].stem
 
         # Try splitting on final slash
         split = self._file_base.rsplit("/", maxsplit=1)
@@ -230,18 +231,22 @@ class MooseRun(WrappedRun):
                     ] = val
         return input_metadata
 
-    def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
+    def _moose_input_callback(
+        self, input_metadata: dict[str, typing.Any], file_stem: str
+    ) -> None:
         """Extract useful information from the MOOSE input file metadata.
 
         Parameters
         ----------
         input_metadata: dict[str, typing.Any]
             The metadata from the MOOSE input file
+        file_stem: str
+            The stem of the file name which this data was loaded from
 
         """
-        # Find the location to output files
-        self._file_base = input_metadata.get("Outputs", {}).get("file_base", None)
-        self._output_dir_path, self._results_prefix = self._find_results_dir()
+        # Find the location to output files, subsequent files override settings from previous ones (if set)
+        if _file_base := input_metadata.get("Outputs", {}).get("file_base", None):
+            self._file_base = _file_base
 
         if _executioner_metadata := input_metadata.get("Executioner", None):
             if _dt := _executioner_metadata.get("dt", None):
@@ -254,12 +259,8 @@ class MooseRun(WrappedRun):
 
             if _executioner_metadata.get("type", "").lower() == "steady":
                 self._steady = True
-        else:
-            print(
-                "No Executioner block detected in your MOOSE input file - falling back to log times and steps."
-            )
 
-        self.update_metadata({self.moose_file_path.stem: input_metadata})
+        self.update_metadata({file_stem: input_metadata})
 
     def _log_header_parser(self, line: str) -> None:
         """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
@@ -591,6 +592,25 @@ class MooseRun(WrappedRun):
             timestamp=timestamp if timestamp else None,
         )
 
+    def _upload_parse_input_files(self) -> None:
+        """Upload as artifact, parse & upload metadata from each MOOSE input file."""
+        # Save the MOOSE file for this run to the Simvue server
+        for file_path in self.moose_file_paths:
+            if file_path.exists() and (
+                self.upload_files is None or file_path.name in self.upload_files
+            ):
+                self.save_file(file_path, category="input")
+
+        for file_path in self.moose_file_paths:
+            # Parse the MOOSE input file
+            input_metadata = self._moose_input_parser(file_path)
+
+            # Extract useful information
+            self._moose_input_callback(input_metadata, file_stem=file_path.stem)
+
+        # Determine output location
+        self._output_dir_path, self._results_prefix = self._find_results_dir()
+
     def _pre_simulation(self):
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
@@ -606,11 +626,7 @@ class MooseRun(WrappedRun):
             # Ensure workdir path exists
             self.workdir_path.mkdir(parents=True, exist_ok=True)
 
-        # Save the MOOSE file for this run to the Simvue server
-        if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path.name in self.upload_files
-        ):
-            self.save_file(self.moose_file_path, category="input")
+        self._upload_parse_input_files()
 
         # Save the MOOSE Makefile
         if (
@@ -622,12 +638,6 @@ class MooseRun(WrappedRun):
                 pathlib.Path(self.moose_application_path).parent.joinpath("Makefile"),
                 category="input",
             )
-
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Extract useful information
-        self._moose_input_callback(input_metadata)
 
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
@@ -646,11 +656,11 @@ class MooseRun(WrappedRun):
             command += format_command_env_vars(self.parallel_cli_options)
         command += [
             str(self.moose_application_path.absolute()),
-            "-i",
-            str(self.moose_file_path.absolute()),
             "--color",
             "off",
+            "-i",
         ]
+        command += [str(file_path) for file_path in self.moose_file_paths]
         command += format_command_env_vars(self.moose_cli_options)
 
         # Delete .out file, if it exists, so we don't upload old events
@@ -708,16 +718,13 @@ class MooseRun(WrappedRun):
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
             files_to_upload = (
-                self._output_dir_path.joinpath(file)
-                for file in self.upload_files
-                if file != self.moose_file_path.name
+                self._output_dir_path.joinpath(file) for file in self.upload_files
             )
 
         for file in files_to_upload:
-            if (
-                file.is_dir()
-                or file.absolute() == pathlib.Path(self.moose_file_path).absolute()
-            ):
+            if file.is_dir() or file.name in [
+                file_path.name for file_path in self.moose_file_paths
+            ]:
                 continue
             self.save_file(file, category="output")
 
@@ -728,7 +735,7 @@ class MooseRun(WrappedRun):
     def launch(
         self,
         moose_application_path: pydantic.FilePath,
-        moose_file_path: pydantic.FilePath,
+        moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
@@ -749,8 +756,8 @@ class MooseRun(WrappedRun):
         ----------
         moose_application_path : pydantic.FilePath
             Path to the MOOSE application file
-        moose_file_path : pydantic.FilePath
-            Path to the MOOSE configuration file
+        moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
+            Path, or list of paths, to the MOOSE configuration file(s)
         workdir_path : str | pathlib.Path | None, optional
             Path to a directory which you would like MOOSE to run in, by default None
             If this directory does not exist, it will be created.
@@ -780,7 +787,9 @@ class MooseRun(WrappedRun):
 
         """
         self.moose_application_path = moose_application_path
-        self.moose_file_path = moose_file_path
+        self.moose_file_paths = (
+            moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
+        )
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
@@ -796,7 +805,7 @@ class MooseRun(WrappedRun):
     @pydantic.validate_call
     def load(
         self,
-        moose_file_path: pydantic.FilePath,
+        moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
         results_dir: pydantic.DirectoryPath | None = None,
         log_path: pydantic.FilePath | None = None,
         upload_files: list[str] | None = None,
@@ -807,7 +816,7 @@ class MooseRun(WrappedRun):
 
         Parameters
         ----------
-        moose_file_path : pydantic.FilePath
+        moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
             Path to the MOOSE configuration file
         results_dir : pydantic.DirectoryPath | None, optional
             A path to a directory containing MOOSE simulation results to upload
@@ -835,21 +844,15 @@ class MooseRun(WrappedRun):
             Found if more than one potential console log file is found, and the user did not specify the one to use.
 
         """
-        self.moose_file_path = moose_file_path
+        self.moose_file_paths = (
+            moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
+        )
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self._loading_historic_run = True
 
-        # Save the MOOSE file for this run to the Simvue server
-        if self.upload_files is None or self.moose_file_path.name in self.upload_files:
-            self.save_file(self.moose_file_path, category="input")
-
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Extract useful information
-        self._moose_input_callback(input_metadata)
+        self._upload_parse_input_files()
 
         if results_dir:
             if (

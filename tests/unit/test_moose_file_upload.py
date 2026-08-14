@@ -18,14 +18,15 @@ def mock_moose_process(self, *_, **__):
     return True
 
 
-def mock_input_callback(self, *_, **__):
-    self._output_dir_path = pathlib.Path(__file__).parent.joinpath(
-        "example_data", "moose_outputs"
+def mock_find_results_dir(self, *_, **__):
+    return (
+        pathlib.Path(__file__).parent.joinpath("example_data", "moose_outputs"),
+        "moose_test",
     )
-    self._results_prefix = "moose_test"
 
 
-@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
+@patch.object(MooseRun, "_find_results_dir", mock_find_results_dir)
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_file_upload(folder_setup):
     """
@@ -54,7 +55,8 @@ def test_moose_file_upload(folder_setup):
         assert pathlib.Path(temp_dir).joinpath("moose_test.e").exists()
 
 
-@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
+@patch.object(MooseRun, "_find_results_dir", mock_find_results_dir)
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_moose_process)
 def test_moose_file_upload_specific_files(folder_setup):
     """
@@ -107,7 +109,8 @@ def mock_aborted_moose_process(self, *_, **__):
     thread.start()
 
 
-@patch.object(MooseRun, "_moose_input_callback", mock_input_callback)
+@patch.object(MooseRun, "_find_results_dir", mock_find_results_dir)
+@patch.object(MooseRun, "_moose_input_callback", lambda *_, **__: None)
 @patch.object(MooseRun, "add_process", mock_aborted_moose_process)
 def test_moose_file_upload_after_abort(folder_setup):
     """

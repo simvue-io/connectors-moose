@@ -96,10 +96,13 @@ def test_moose_input_parser(
             "example_data", f"{file_name}.i"
         )
         run_id = run.id
-        input_metadata = run._moose_input_parser(
-            pathlib.Path(__file__).parent.joinpath("example_data", f"{file_name}.i")
+        file_path = pathlib.Path(__file__).parent.joinpath(
+            "example_data", f"{file_name}.i"
         )
-        run._moose_input_callback(input_metadata)
+        input_metadata = run._moose_input_parser(file_path)
+
+        run._moose_input_callback(input_metadata, file_path.stem)
+        run._output_dir_path, run._results_prefix = run._find_results_dir()
 
         client = simvue.Client()
         metadata = client.get_run(run_id).metadata
