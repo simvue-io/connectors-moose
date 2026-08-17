@@ -318,7 +318,12 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
     with tempfile.TemporaryDirectory() as tempd:
         # Need to make a copy of the input file into the workdir
         # Because file_base not specified, so will make results relative to input file
-        for file_name in ("diffusion_1a.i", "diffusion_1b.i", "diffusion_1c.i"):
+        for file_name in (
+            "diffusion_1a.i",
+            "diffusion_1b.i",
+            "diffusion_1c.i",
+            "diffusion_1d.i",
+        ):
             shutil.copy(
                 pathlib.Path(__file__).parent.joinpath("example_data", file_name),
                 pathlib.Path(tempd).joinpath(file_name),
