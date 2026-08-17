@@ -92,14 +92,11 @@ def test_moose_input_parser(
             name="test_moose_input_parser-%s" % str(uuid.uuid4()), folder=folder_setup
         )
         run.workdir_path = pathlib.Path.cwd()
-        run.moose_file_path = pathlib.Path(__file__).parent.joinpath(
-            "example_data", f"{file_name}.i"
-        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).parent.joinpath("example_data", f"{file_name}.i")
+        ]
         run_id = run.id
-        file_path = pathlib.Path(__file__).parent.joinpath(
-            "example_data", f"{file_name}.i"
-        )
-        input_metadata = run._moose_input_parser([file_path])
+        input_metadata = run._moose_input_parser()
 
         run._moose_input_callback(input_metadata)
         run._output_dir_path, run._results_prefix = run._find_results_dir()
@@ -138,19 +135,18 @@ def test_multi_input_parser(folder_setup):
         run.init(
             name="test_multi_input_parser-%s" % str(uuid.uuid4()), folder=folder_setup
         )
-        input_metadata = run._moose_input_parser(
-            [
-                pathlib.Path(__file__).parent.joinpath(
-                    "example_data", "example_input_5a.i"
-                ),
-                pathlib.Path(__file__).parent.joinpath(
-                    "example_data", "example_input_5b.i"
-                ),
-                pathlib.Path(__file__).parent.joinpath(
-                    "example_data", "example_input_5c.i"
-                ),
-            ]
-        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_5a.i"
+            ),
+            pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_5b.i"
+            ),
+            pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_5c.i"
+            ),
+        ]
+        input_metadata = run._moose_input_parser()
 
         # Check metadata from input file A is present
         assert input_metadata["Mesh"]["generated"]["dim"] == 3
@@ -177,3 +173,29 @@ def test_multi_input_parser(folder_setup):
 
         # Check values duplicated across files are not an issue
         assert input_metadata["Executioner"]["type"] == "Transient"
+
+
+def test_included_file_parser(folder_setup):
+    with MooseRun() as run:
+        run.config(disable_resources_metrics=True)
+        run.init(
+            name="test_included_input_parser-%s" % str(uuid.uuid4()),
+            folder=folder_setup,
+        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).parent.joinpath(
+                "example_data", "example_input_6a.i"
+            ),
+        ]
+        input_metadata = run._moose_input_parser()
+
+        # Check metadata from input file A is present
+        assert input_metadata["Mesh"]["generated"]["dim"] == 3
+        assert (
+            input_metadata["VectorPostprocessors"]["temps_line"]["type"]
+            == "PointValueSampler"
+        )
+
+        # Check metadata added from file B
+        assert input_metadata["BCs"]["cold"]["variable"] == "T"
+        assert input_metadata["BCs"]["hot"]["value"] == 1000

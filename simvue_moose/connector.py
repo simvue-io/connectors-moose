@@ -180,7 +180,7 @@ class MooseRun(WrappedRun):
         return workdir.joinpath(dir_path).resolve(), results_prefix
 
     def _moose_input_parser(
-        self, input_files: list[pathlib.Path]
+        self,
     ) -> dict[str, typing.Any]:
         """Parse MOOSE input files, and create a dictionary of nested metadata.
 
@@ -188,27 +188,49 @@ class MooseRun(WrappedRun):
         later files should override values from earlier ones.
         This happens on a per value basis, not a per heading / section basis.
 
-        Parameters
-        ----------
-        input_files: list[pathlib.Path]
-            The path(s) to the MOOSE input file(s)
-
         Returns
         -------
         dict[str, typing.Any]
             The combined MOOSE input file as a dictionary of metadata
 
         """
+        input_files = list(self.moose_file_paths)
         input_metadata = {}
         # Will make a list of keys for each value to create a nested dict
         keys = []
-        for input_file in input_files:
+
+        while input_files:
+            input_file = input_files.pop(0)
             with open(input_file, "r") as file:
                 for line in file:
                     line = line.strip()
+                    # Find additional input files to concatenate with this one
+                    if line.startswith("!include"):
+                        file_name = line.removeprefix("!include").strip()
+
+                        # MOOSE looks in parent dir of input file first, then in workdir
+                        search_locs = [
+                            input_file.parent,
+                            self.workdir_path
+                            if self.workdir_path
+                            else pathlib.Path.cwd(),
+                        ]
+
+                        for search_loc in search_locs:
+                            if (
+                                candidate_path := search_loc.joinpath(file_name)
+                            ).exists():
+                                # Should be parsed next, since !include works as if the new file was appended to the existing file
+                                input_files.insert(0, candidate_path)
+                                # And so that file is uploaded as an artifact...
+                                self.moose_file_paths.insert(0, candidate_path)
+                                break
+
+                        print(f"Warning: Failed to find included file {file_name}.")
+
                     # Find lines which represent ends of blocks
                     # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
-                    if re.search(r"\[[^\w]*\]", line):
+                    elif re.search(r"\[[^\w]*\]", line):
                         # Remove that block from the key - split at the last dot in the key and remove what comes after
                         keys.pop()
                     # Find lines which represent starts of new blocks
@@ -596,21 +618,21 @@ class MooseRun(WrappedRun):
 
     def _upload_parse_input_files(self) -> None:
         """Upload as artifact, parse & upload metadata from each MOOSE input file."""
-        # Save the MOOSE file for this run to the Simvue server
-        for file_path in self.moose_file_paths:
-            if file_path.exists() and (
-                self.upload_files is None or file_path.name in self.upload_files
-            ):
-                self.save_file(file_path, category="input")
-
         # Parse the MOOSE input files
-        input_metadata = self._moose_input_parser(self.moose_file_paths)
+        input_metadata = self._moose_input_parser()
 
         # Extract useful information
         self._moose_input_callback(input_metadata)
 
         # Determine output location
         self._output_dir_path, self._results_prefix = self._find_results_dir()
+
+        # Save the MOOSE file for this run to the Simvue server
+        for file_path in self.moose_file_paths:
+            if file_path.exists() and (
+                self.upload_files is None or file_path.name in self.upload_files
+            ):
+                self.save_file(file_path, category="input")
 
     def _pre_simulation(self):
         """Upload information to Simvue before the MOOSE simulation begins."""

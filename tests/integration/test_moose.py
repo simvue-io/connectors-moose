@@ -371,6 +371,8 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
         run_data.metadata["input_file"]["Executioner"]["petsc_options_value"]
         == "'hypre boomeramg'"
     )
+    # Metadata added from !include'd file 1d
+    assert run_data.metadata["input_file"]["Outputs"]["exodus"] == "true"
 
     # Check events uploaded from log
     assert "Beginning Nonlinear Iteration 1" in events
@@ -393,7 +395,12 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Check input files uploaded as input
         client.get_artifacts_as_files(run_id, "input", temp_dir)
-        for file_name in ("diffusion_1a.i", "diffusion_1b.i", "diffusion_1c.i"):
+        for file_name in (
+            "diffusion_1a.i",
+            "diffusion_1b.i",
+            "diffusion_1c.i",
+            "diffusion_1d.i",
+        ):
             assert pathlib.Path(temp_dir).joinpath(file_name).exists()
 
         # Check results uploaded as output

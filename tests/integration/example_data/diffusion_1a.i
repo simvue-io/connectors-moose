@@ -1,3 +1,5 @@
+!include diffusion_1d.i
+
 [Mesh]
   type = GeneratedMesh
   dim = 2
@@ -17,8 +19,4 @@
 [Executioner]
   type = Steady
   solve_type = 'PJFNK'
-[]
-
-[Outputs]
-  exodus = true
 []
