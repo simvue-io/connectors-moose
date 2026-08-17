@@ -28,7 +28,7 @@ def run_moose(
     with MooseRun(mode="offline" if offline else "online") as run:
         # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
         run.init(
-            name=f"fds-integration-{moose_file_path.stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
+            name=f"fds-integration-{moose_file_path.stem if isinstance(moose_file_path, pathlib.Path) else moose_file_path[0].stem}-{'parallel' if parallel else 'serial'}-{'offline' if offline else 'online'}-{'load' if load else 'launch'}-{str(uuid.uuid4())}",
             description="An example of using the MooseRun Connector to track a MOOSE simulation.",
             folder="/test-moose",
             tags=["moose", "thermal", "diffusion"],
