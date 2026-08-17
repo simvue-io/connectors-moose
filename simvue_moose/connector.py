@@ -198,22 +198,45 @@ class MooseRun(WrappedRun):
 
         with open(input_file, "r") as file:
             for line in file:
+                # Strip comments while preserving '#' inside quoted values.
+                # HIT treats quotes as delimiters only when they begin a value.
+                quote = None
+                escaped = False
+                value_start = line.find("=")
+                for index, char in enumerate(line):
+                    if escaped:
+                        escaped = False
+                    elif quote and char == "\\":
+                        escaped = True
+                    elif char == quote:
+                        quote = None
+                        value_start = index
+                    elif char == "#" and not quote:
+                        line = line[:index]
+                        break
+                    elif (
+                        not quote
+                        and value_start >= 0
+                        and char in "'\""
+                        and not line[value_start + 1 : index].strip()
+                    ):
+                        quote = char
+
                 line = line.strip()
                 # Find lines which represent ends of blocks
                 # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
-                if re.search(r"\[[^\w]*\]", line):
+                if re.fullmatch(r"\[[^\w]*\]", line):
                     # Remove that block from the key - split at the last dot in the key and remove what comes after
                     keys.pop()
                 # Find lines which represent starts of new blocks
                 # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
-                elif new_key := re.search(r"\[.+\]", line):
+                elif new_key := re.fullmatch(r"\[.+\]", line):
                     # Add the title of the new block to the key, dot separated notation
                     # Remove './' from before the titles of blocks if present
                     # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
                     keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
                 # Find lines which represent a key value pair, <key> = <value>
-                # Make sure to remove in line comments from the value
-                elif match := re.search(r"(\w*)\s*=\s*([^#]+)(#+.*)?", line):
+                elif match := re.search(r"(\w*)\s*=\s*(.+)", line):
                     # If the value ends with a ;, it means it is a multi line array input
                     # Not interested in uploading long inputs like these as metadata, so ignore for now
                     if ";" in match.group(2):
