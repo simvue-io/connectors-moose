@@ -300,6 +300,107 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
         assert pathlib.Path(temp_dir).joinpath("diffusion_csv.csv").exists()
 
 
+@pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
+@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
+@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
+def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
+    try:
+        subprocess.run(MOOSE_APP_PATH)
+    except FileNotFoundError:
+        pytest.skip(
+            "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
+        )
+    if load:
+        if parallel:
+            pytest.skip("Parallel has no effect when loading from historic runs")
+
+        # Create a temp dir to contain results
+    with tempfile.TemporaryDirectory() as tempd:
+        # Need to make a copy of the input file into the workdir
+        # Because file_base not specified, so will make results relative to input file
+        for file_name in ("diffusion_1a.i", "diffusion_1b.i", "diffusion_1c.i"):
+            shutil.copy(
+                pathlib.Path(__file__).parent.joinpath("example_data", file_name),
+                pathlib.Path(tempd).joinpath(file_name),
+            )
+        run_id = run_moose(
+            moose_file_path=[
+                pathlib.Path(tempd).joinpath("diffusion_1a.i"),
+                pathlib.Path(tempd).joinpath("diffusion_1b.i"),
+                pathlib.Path(tempd).joinpath("diffusion_1c.i"),
+            ],
+            load_results_dir=pathlib.Path(__file__).parent.joinpath(
+                "example_data", "multi_input_results"
+            ),
+            workdir_path=None,
+            offline=offline,
+            parallel=parallel,
+            load=load,
+            upload_misc_logs=True,
+            moose_app_path=MOOSE_APP_PATH,
+        )
+
+    client = simvue.Client()
+    run_data = client.get_run(run_id)
+    events = [event["message"] for event in client.get_events(run_id)]
+
+    # Check run description and tags from init have been added
+    assert (
+        run_data.description
+        == "An example of using the MooseRun Connector to track a MOOSE simulation."
+    )
+    assert run_data.tags == ["moose", "thermal", "diffusion"]
+
+    # Check metadata from MOOSE log header has been uploaded
+    assert (
+        run_data.metadata["moose"]["execution_information"]["executioner"] == "Steady"
+    )
+
+    if parallel:
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
+    else:
+        assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
+
+    # Check metadata from first MOOSE input file has been uploaded
+    # Executioner information added to by 1c, but doesn't override this value, so should remain
+    assert run_data.metadata["input_file"]["Executioner"]["type"] == "Steady"
+    # Metadata applied from 1b, overwritten by 1c
+    assert run_data.metadata["input_file"]["BCs"]["right"]["value"] == 1
+    # Other 1c metadata for Executioner added
+    assert (
+        run_data.metadata["input_file"]["Executioner"]["petsc_options_value"]
+        == "hypre boomeramg"
+    )
+
+    # Check events uploaded from log
+    assert "Beginning Nonlinear Iteration 1" in events
+    assert " Solve Converged!" in events
+    assert " Total Nonlinear Iterations: 3." in events
+
+    # Check residuals themselves not uploaded as events
+    assert not any("Linear |R|" in msg for msg in events)
+    assert not any("Nonlinear |R|" in msg for msg in events)
+
+    metrics = dict(run_data.metrics)
+
+    # Check residuals metrics uploaded from log file
+    assert metrics.get("linear_iteration_residuals")
+    assert metrics.get("nonlinear_iteration_residuals")
+
+    assert metrics["linear_iteration_residuals"]["count"] > 8
+    assert metrics["nonlinear_iteration_residuals"]["count"] > 2
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Check input files uploaded as input
+        client.get_artifacts_as_files(run_id, "input", temp_dir)
+        for file_name in ("diffusion_1a.i", "diffusion_1b.i", "diffusion_1c.i"):
+            assert pathlib.Path(temp_dir).joinpath(file_name).exists()
+
+        # Check results uploaded as output
+        client.get_artifacts_as_files(run_id, "output", temp_dir)
+        assert pathlib.Path(temp_dir).joinpath("diffusion_1c_out.e").exists()
+
+
 @pytest.mark.parametrize(
     "file_base",
     (None, "relative", "absolute"),

@@ -43,16 +43,16 @@ Execution Information:
   Solver Mode:             Preconditioned JFNK 
   PETSc Preconditioner:    hypre boomeramg 
 
- 0 Nonlinear |R| = [32m6.164414e+00[39m
-      0 Linear |R| = [32m6.164414e+00[39m
-      1 Linear |R| = [32m2.068521e-01[39m
-      2 Linear |R| = [32m5.232522e-03[39m
-      3 Linear |R| = [32m1.838945e-04[39m
-      4 Linear |R| = [32m2.733823e-06[39m
- 1 Nonlinear |R| = [32m2.744340e-06[39m
-      0 Linear |R| = [32m2.744340e-06[39m
-      1 Linear |R| = [32m7.000912e-08[39m
-      2 Linear |R| = [32m8.071272e-10[39m
-      3 Linear |R| = [32m2.661438e-11[39m
- 2 Nonlinear |R| = [32m2.662185e-11[39m
-[32m Solve Converged![39m
+ 0 Nonlinear |R| = 6.164414e+00
+      0 Linear |R| = 6.164414e+00
+      1 Linear |R| = 2.068521e-01
+      2 Linear |R| = 5.232522e-03
+      3 Linear |R| = 1.838945e-04
+      4 Linear |R| = 2.733823e-06
+ 1 Nonlinear |R| = 2.744340e-06
+      0 Linear |R| = 2.744340e-06
+      1 Linear |R| = 7.000912e-08
+      2 Linear |R| = 8.071272e-10
+      3 Linear |R| = 2.661438e-11
+ 2 Nonlinear |R| = 2.662185e-11
+ Solve Converged!
