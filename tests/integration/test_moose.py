@@ -369,7 +369,7 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
     # Other 1c metadata for Executioner added
     assert (
         run_data.metadata["input_file"]["Executioner"]["petsc_options_value"]
-        == "hypre boomeramg"
+        == "'hypre boomeramg'"
     )
 
     # Check events uploaded from log

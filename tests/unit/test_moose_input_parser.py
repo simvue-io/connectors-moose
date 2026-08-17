@@ -130,3 +130,50 @@ def test_moose_input_parser(
             assert run._dt == 0.1
         else:
             assert run._dt == None
+
+
+def test_multi_input_parser(folder_setup):
+    with MooseRun() as run:
+        run.config(disable_resources_metrics=True)
+        run.init(
+            name="test_multi_input_parser-%s" % str(uuid.uuid4()), folder=folder_setup
+        )
+        input_metadata = run._moose_input_parser(
+            [
+                pathlib.Path(__file__).parent.joinpath(
+                    "example_data", "example_input_5a.i"
+                ),
+                pathlib.Path(__file__).parent.joinpath(
+                    "example_data", "example_input_5b.i"
+                ),
+                pathlib.Path(__file__).parent.joinpath(
+                    "example_data", "example_input_5c.i"
+                ),
+            ]
+        )
+
+        # Check metadata from input file A is present
+        assert input_metadata["Mesh"]["generated"]["dim"] == 3
+        assert (
+            input_metadata["VectorPostprocessors"]["temps_line"]["type"]
+            == "PointValueSampler"
+        )
+
+        # Check Executioner block not fully overriden by file C
+        assert input_metadata["Executioner"]["solve_type"] == "NEWTON"
+
+        # Check metadata added from file B
+        assert input_metadata["BCs"]["cold"]["variable"] == "T"
+
+        # Check hot BC not fully overriden from file C
+        assert input_metadata["BCs"]["hot"]["type"] == "DirichletBC"
+
+        # Check metadata from file B overwrites file A
+        assert input_metadata["Outputs"]["file_base"] == "results/example_input_5"
+
+        # Check metadata added from file C, overwriting other files
+        assert input_metadata["BCs"]["hot"]["value"] == 2000
+        assert input_metadata["Executioner"]["end_time"] == 60
+
+        # Check values duplicated across files are not an issue
+        assert input_metadata["Executioner"]["type"] == "Transient"
