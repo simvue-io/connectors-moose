@@ -179,69 +179,71 @@ class MooseRun(WrappedRun):
         # Otherwise, relative path, should be relative to working dir
         return workdir.joinpath(dir_path).resolve(), results_prefix
 
-    def _moose_input_parser(self, input_file: pathlib.Path) -> dict[str, typing.Any]:
-        """Parse MOOSE input file, and create a dictionary of metadata with dot notation representing indentation of keys.
+    def _moose_input_parser(
+        self, input_files: list[pathlib.Path]
+    ) -> dict[str, typing.Any]:
+        """Parse MOOSE input files, and create a dictionary of nested metadata.
+
+        Note in the case of multiple input files being provided with duplicate keys,
+        later files should override values from earlier ones.
+        This happens on a per value basis, not a per heading / section basis.
 
         Parameters
         ----------
-        input_file: pathlib.Path
-            The path to the MOOSE input file
+        input_files: list[pathlib.Path]
+            The path(s) to the MOOSE input file(s)
 
         Returns
         -------
         dict[str, typing.Any]
-            The MOOSE input file as a dictionary of metadata
+            The combined MOOSE input file as a dictionary of metadata
 
         """
         input_metadata = {}
         # Will make a list of keys for each value to create a nested dict
         keys = []
+        for input_file in input_files:
+            with open(input_file, "r") as file:
+                for line in file:
+                    line = line.strip()
+                    # Find lines which represent ends of blocks
+                    # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
+                    if re.search(r"\[[^\w]*\]", line):
+                        # Remove that block from the key - split at the last dot in the key and remove what comes after
+                        keys.pop()
+                    # Find lines which represent starts of new blocks
+                    # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
+                    elif new_key := re.search(r"\[.+\]", line):
+                        # Add the title of the new block to the key, dot separated notation
+                        # Remove './' from before the titles of blocks if present
+                        # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
+                        keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
+                    # Find lines which represent a key value pair, <key> = <value>
+                    # Make sure to remove in line comments from the value
+                    elif match := re.search(r"(\w*)\s*=\s*([^#]+)(#+.*)?", line):
+                        # If the value ends with a ;, it means it is a multi line array input
+                        # Not interested in uploading long inputs like these as metadata, so ignore for now
+                        if ";" in match.group(2):
+                            continue
+                        try:
+                            val = float(match.group(2).strip())
+                        except ValueError:
+                            val = match.group(2).strip()
 
-        with open(input_file, "r") as file:
-            for line in file:
-                line = line.strip()
-                # Find lines which represent ends of blocks
-                # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
-                if re.search(r"\[[^\w]*\]", line):
-                    # Remove that block from the key - split at the last dot in the key and remove what comes after
-                    keys.pop()
-                # Find lines which represent starts of new blocks
-                # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
-                elif new_key := re.search(r"\[.+\]", line):
-                    # Add the title of the new block to the key, dot separated notation
-                    # Remove './' from before the titles of blocks if present
-                    # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
-                    keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
-                # Find lines which represent a key value pair, <key> = <value>
-                # Make sure to remove in line comments from the value
-                elif match := re.search(r"(\w*)\s*=\s*([^#]+)(#+.*)?", line):
-                    # If the value ends with a ;, it means it is a multi line array input
-                    # Not interested in uploading long inputs like these as metadata, so ignore for now
-                    if ";" in match.group(2):
-                        continue
-                    try:
-                        val = float(match.group(2).strip())
-                    except ValueError:
-                        val = match.group(2).strip()
-
-                    # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
-                    # then set the final key: value pair as normal
-                    reduce(lambda d, key: d.setdefault(key, {}), keys, input_metadata)[
-                        match.group(1)
-                    ] = val
+                        # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
+                        # then set the final key: value pair as normal
+                        reduce(
+                            lambda d, key: d.setdefault(key, {}), keys, input_metadata
+                        )[match.group(1)] = val
         return input_metadata
 
-    def _moose_input_callback(
-        self, input_metadata: dict[str, typing.Any], file_stem: str
-    ) -> None:
+    def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
         """Extract useful information from the MOOSE input file metadata.
 
         Parameters
         ----------
         input_metadata: dict[str, typing.Any]
-            The metadata from the MOOSE input file
-        file_stem: str
-            The stem of the file name which this data was loaded from
+            The metadata from the MOOSE input files
 
         """
         # Find the location to output files, subsequent files override settings from previous ones (if set)
@@ -260,7 +262,7 @@ class MooseRun(WrappedRun):
             if _executioner_metadata.get("type", "").lower() == "steady":
                 self._steady = True
 
-        self.update_metadata({file_stem: input_metadata})
+        self.update_metadata({"input_file": input_metadata})
 
     def _log_header_parser(self, line: str) -> None:
         """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
@@ -601,12 +603,11 @@ class MooseRun(WrappedRun):
             ):
                 self.save_file(file_path, category="input")
 
-        for file_path in self.moose_file_paths:
-            # Parse the MOOSE input file
-            input_metadata = self._moose_input_parser(file_path)
+        # Parse the MOOSE input files
+        input_metadata = self._moose_input_parser(self.moose_file_paths)
 
-            # Extract useful information
-            self._moose_input_callback(input_metadata, file_stem=file_path.stem)
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
 
         # Determine output location
         self._output_dir_path, self._results_prefix = self._find_results_dir()

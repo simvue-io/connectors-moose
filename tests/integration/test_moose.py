@@ -140,12 +140,10 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
 
     # Check metadata from MOOSE input file has been uploaded
     assert (
-        run_data.metadata["thermal_bar"]["Postprocessors"]["average_temperature"][
-            "type"
-        ]
+        run_data.metadata["input_file"]["Postprocessors"]["average_temperature"]["type"]
         == "ElementAverageValue"
     )
-    assert run_data.metadata["thermal_bar"]["BCs"]["hot"]["value"] == 1000
+    assert run_data.metadata["input_file"]["BCs"]["hot"]["value"] == 1000
 
     # Check events uploaded from log
     assert "Time Step 1, time = 2, dt = 2" in events
@@ -263,10 +261,10 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
 
     # Check metadata from MOOSE input file has been uploaded
     assert (
-        run_data.metadata["diffusion"]["Postprocessors"]["left"]["type"]
+        run_data.metadata["input_file"]["Postprocessors"]["left"]["type"]
         == "SideAverageValue"
     )
-    assert run_data.metadata["diffusion"]["GlobalParams"]["diffusivity"] == 1
+    assert run_data.metadata["input_file"]["GlobalParams"]["diffusivity"] == 1
 
     # Check events uploaded from log
     assert "Beginning Nonlinear Iteration 1" in events
@@ -419,12 +417,10 @@ def test_file_base(file_base, workdir_path, offline_cache_setup, monkeypatch):
 
     # Check metadata from MOOSE input file has been uploaded
     assert (
-        run_data.metadata["thermal_bar"]["Postprocessors"]["average_temperature"][
-            "type"
-        ]
+        run_data.metadata["input_file"]["Postprocessors"]["average_temperature"]["type"]
         == "ElementAverageValue"
     )
-    assert run_data.metadata["thermal_bar"]["BCs"]["hot"]["value"] == 1000
+    assert run_data.metadata["input_file"]["BCs"]["hot"]["value"] == 1000
 
     # Check events uploaded from log
     assert "Time Step 1, time = 2, dt = 2" in events

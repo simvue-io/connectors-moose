@@ -9,48 +9,48 @@ testdata = [
     (
         "example_input_1",
         {
-            "example_input_1.r": "${units 5 cm -> m}",
-            "example_input_1.GlobalParams.initial_T": 310,
-            "example_input_1.FluidProperties.fluid.type": "IdealGasFluidProperties",
-            "example_input_1.Components.pipe.position": "'0 0 0'",
-            "example_input_1.Postprocessors.T_inlet.boundary": "pipe:in",
+            "input_file.r": "${units 5 cm -> m}",
+            "input_file.GlobalParams.initial_T": 310,
+            "input_file.FluidProperties.fluid.type": "IdealGasFluidProperties",
+            "input_file.Components.pipe.position": "'0 0 0'",
+            "input_file.Postprocessors.T_inlet.boundary": "pipe:in",
         },
         {},
     ),
     (
         "example_input_2",
         {
-            "example_input_2.Mesh.file": "mug.e",
-            "example_input_2.Variables.diffused.order": "FIRST",
-            "example_input_2.BCs.bottom.value": 1,
-            "example_input_2.BCs.top.boundary": "'top'",
+            "input_file.Mesh.file": "mug.e",
+            "input_file.Variables.diffused.order": "FIRST",
+            "input_file.BCs.bottom.value": 1,
+            "input_file.BCs.top.boundary": "'top'",
         },
         {
-            "example_input_2.BCs.bottom.boundary": "'bottom' # This must match a named boundary in the mesh file",
-            "example_input_2.BCs.bottom] # arbitrary user-chosen name.type": "Shouldn't exist",
-            "example_input_2.Mesh.#file": "mug_2.e",
+            "input_file.BCs.bottom.boundary": "'bottom' # This must match a named boundary in the mesh file",
+            "input_file.BCs.bottom] # arbitrary user-chosen name.type": "Shouldn't exist",
+            "input_file.Mesh.#file": "mug_2.e",
         },
     ),
     (
         "example_input_3",
         {
-            "example_input_3.Mesh.file": "half-cone.e",
-            "example_input_3.Variables.diffused.order": "FIRST",
-            "example_input_3.Kernels.td.type": "TimeDerivative",
-            "example_input_3.BCs.left.value": 2,
-            "example_input_3.Outputs.exodus": "true",
+            "input_file.Mesh.file": "half-cone.e",
+            "input_file.Variables.diffused.order": "FIRST",
+            "input_file.Kernels.td.type": "TimeDerivative",
+            "input_file.BCs.left.value": 2,
+            "input_file.Outputs.exodus": "true",
         },
         {
-            "example_input_3.Variables../diffused.order": "FIRST",
-            "example_input_3.Executioner.#Preconditioned": "JFNK (default)",
+            "input_file.Variables../diffused.order": "FIRST",
+            "input_file.Executioner.#Preconditioned": "JFNK (default)",
         },
     ),
     (
         "example_input_4",
         {
-            "example_input_4.Mesh.generated.type": "GeneratedMeshGenerator",
-            "example_input_4.VectorPostprocessors.temps_line.points": "'0 0.5 0.5  1 0.5 0.5  2 0.5 0.5  3 0.5 0.5  4 0.5 0.5  5 0.5 0.5  6 0.5 0.5'",
-            "example_input_4.Postprocessors": {
+            "input_file.Mesh.generated.type": "GeneratedMeshGenerator",
+            "input_file.VectorPostprocessors.temps_line.points": "'0 0.5 0.5  1 0.5 0.5  2 0.5 0.5  3 0.5 0.5  4 0.5 0.5  5 0.5 0.5  6 0.5 0.5'",
+            "input_file.Postprocessors": {
                 "temp.avg": {
                     "type": "ElementAverageValue",
                     "block": 0.0,
@@ -71,7 +71,7 @@ testdata = [
             },
         },
         {
-            "example_input_4.Postprocessors.temp.avg.block": "Shouldn't exist",
+            "input_file.Postprocessors.temp.avg.block": "Shouldn't exist",
         },
     ),
 ]
@@ -99,9 +99,9 @@ def test_moose_input_parser(
         file_path = pathlib.Path(__file__).parent.joinpath(
             "example_data", f"{file_name}.i"
         )
-        input_metadata = run._moose_input_parser(file_path)
+        input_metadata = run._moose_input_parser([file_path])
 
-        run._moose_input_callback(input_metadata, file_path.stem)
+        run._moose_input_callback(input_metadata)
         run._output_dir_path, run._results_prefix = run._find_results_dir()
 
         client = simvue.Client()
