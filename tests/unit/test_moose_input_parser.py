@@ -180,6 +180,8 @@ def test_moose_input_parser_ignores_syntax_in_comments(tmp_path, block_body):
         pytest.param("'material#1'", id="single-quoted-hash"),
         pytest.param('"material#1"', id="double-quoted-hash"),
         pytest.param(r"'material\'#1'", id="escaped-quote"),
+        pytest.param(r"'material\\'", id="double-backslash-before-closing-quote"),
+        pytest.param('"first" "second#part"', id="consecutive-quoted-strings"),
         pytest.param("O'Reilly", id="apostrophe-in-unquoted-value"),
     ),
 )
