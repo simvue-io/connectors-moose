@@ -5,6 +5,17 @@ import pytest
 import pathlib
 from functools import reduce
 
+
+def _parse_moose_input(
+    tmp_path: pathlib.Path, contents: str
+) -> dict[str, object]:
+    input_path = tmp_path / "input.i"
+    _ = input_path.write_text(contents)
+
+    run = MooseRun.__new__(MooseRun)
+    return run._moose_input_parser(input_path)
+
+
 testdata = [
     (
         "example_input_1",
@@ -127,3 +138,75 @@ def test_moose_input_parser(
             assert run._dt == 0.1
         else:
             assert run._dt == None
+
+
+@pytest.mark.parametrize(
+    "block_body",
+    (
+        pytest.param(
+            "  # ignored = 2\n  value = 1\n  after = 2",
+            id="commented-assignment",
+        ),
+        pytest.param(
+            "  # [Ignored]\n  value = 1\n  after = 2",
+            id="commented-block-opener",
+        ),
+        pytest.param(
+            "  value = 1 # [Ignored]\n  after = 2",
+            id="inline-commented-block-opener",
+        ),
+        pytest.param(
+            "  value = 1\n  # []\n  after = 2",
+            id="commented-block-closer",
+        ),
+        pytest.param(
+            "  value = 1 # []\n  after = 2",
+            id="inline-commented-block-closer",
+        ),
+    ),
+)
+def test_moose_input_parser_ignores_syntax_in_comments(tmp_path, block_body):
+    metadata = _parse_moose_input(
+        tmp_path,
+        f"[Outer]\n{block_body}\n[]\n",
+    )
+
+    assert metadata == {"Outer": {"value": 1.0, "after": 2.0}}
+
+
+@pytest.mark.parametrize(
+    "value",
+    (
+        pytest.param("'material#1'", id="single-quoted-hash"),
+        pytest.param('"material#1"', id="double-quoted-hash"),
+        pytest.param(r"'material\'#1'", id="escaped-quote"),
+        pytest.param(r"'material\\'", id="double-backslash-before-closing-quote"),
+        pytest.param('"first" "second#part"', id="consecutive-quoted-strings"),
+        pytest.param("O'Reilly", id="apostrophe-in-unquoted-value"),
+    ),
+)
+def test_moose_input_parser_preserves_values_when_stripping_comments(
+    tmp_path, value
+):
+    metadata = _parse_moose_input(
+        tmp_path,
+        f"[Outer]\n  label = {value} # actual comment\n[]\n",
+    )
+
+    assert metadata == {"Outer": {"label": value}}
+
+
+@pytest.mark.parametrize(
+    "value",
+    (
+        pytest.param("'[Ignored]'", id="block-opener"),
+        pytest.param("'[]'", id="block-closer"),
+    ),
+)
+def test_moose_input_parser_preserves_brackets_in_quoted_values(tmp_path, value):
+    metadata = _parse_moose_input(
+        tmp_path,
+        f"[Outer]\n  label = {value}\n[]\n",
+    )
+
+    assert metadata == {"Outer": {"label": value}}

@@ -146,6 +146,9 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         == "ElementAverageValue"
     )
     assert run_data.metadata["thermal_bar"]["BCs"]["hot"]["value"] == 1000
+    assert "This comment should not be included in metadata" not in str(
+        run_data.metadata["thermal_bar"]
+    )
 
     # Check events uploaded from log
     assert "Time Step 1, time = 2, dt = 2" in events
