@@ -746,6 +746,7 @@ class MooseRun(WrappedRun):
                 continue
             self.save_file(file, category="output")
 
+        self._failed = self._failed or not self._executor.success
         super()._post_simulation()
 
     @simvue.utilities.prettify_pydantic
