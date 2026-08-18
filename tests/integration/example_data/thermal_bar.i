@@ -51,7 +51,7 @@
     type = DirichletBC
     variable = T
     boundary = left
-    value = 1000
+    value = 1000 # This comment should not be included in metadata
   []
   [cold]
     type = DirichletBC
