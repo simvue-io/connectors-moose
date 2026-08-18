@@ -808,11 +808,19 @@ class MooseRun(WrappedRun):
             These will be applied to whichever parallel job launcher is found first.
             Looks for `srun` if running on a SLURM system, then `mpiexec`, then `mpirun`.
 
+        Raises
+        ------
+        ValueError
+            Raised if no MOOSE input files provided to connector
+
         """
         self.moose_application_path = moose_application_path
         self.moose_file_paths = (
             moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
         )
+        if not moose_file_path:
+            raise ValueError("At least one MOOSE input file path must be provided!")
+
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
@@ -861,6 +869,8 @@ class MooseRun(WrappedRun):
 
         Raises
         ------
+        ValueError
+            Raised if no MOOSE input files provided to connector
         FileNotFoundError
             Raised if no results directory is found at expected location
         RuntimeError
@@ -870,6 +880,9 @@ class MooseRun(WrappedRun):
         self.moose_file_paths = (
             moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
         )
+        if not moose_file_path:
+            raise ValueError("At least one MOOSE input file path must be provided!")
+
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
