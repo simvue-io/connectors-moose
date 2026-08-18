@@ -180,6 +180,69 @@ class MooseRun(WrappedRun):
         # Otherwise, relative path, should be relative to working dir
         return workdir.joinpath(dir_path).resolve(), results_prefix
 
+    def _parse_input_file_line(
+        self,
+        line: str,
+        metadata: dict[str, typing.Any],
+        keys: list[str],
+    ) -> None:
+        # Strip comments while preserving '#' inside quoted values.
+        # HIT treats quotes as delimiters only when they begin a value.
+        quote = None
+        escaped = False
+        value_boundary = line.find("=")
+        for index, char in enumerate(line):
+            if escaped:
+                escaped = False
+            elif quote and char == "\\":  # "\\" is one literal backslash.
+                escaped = True
+            elif char == quote:
+                quote = None
+                value_boundary = index
+            elif char == "#" and not quote:
+                line = line[:index]
+                break
+            # Only a quote at a value boundary opens a quoted string, preserving
+            # quotes in unquoted values while supporting consecutive quoted strings.
+            elif (
+                not quote
+                and value_boundary >= 0
+                and char in "'\""
+                and not line[value_boundary + 1 : index].strip()
+            ):
+                quote = char
+
+        line = line.strip()
+
+        # Find lines which represent ends of blocks
+        # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
+        if re.fullmatch(r"\[[^\w]*\]", line):
+            # Remove that block from the key - split at the last dot in the key and remove what comes after
+            keys.pop()
+        # Find lines which represent starts of new blocks
+        # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
+        elif new_key := re.fullmatch(r"\[.+\]", line):
+            # Add the title of the new block to the key, dot separated notation
+            # Remove './' from before the titles of blocks if present
+            # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
+            keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
+        # Find lines which represent a key value pair, <key> = <value>
+        elif match := re.search(r"(\w*)\s*=\s*(.+)", line):
+            # If the value ends with a ;, it means it is a multi line array input
+            # Not interested in uploading long inputs like these as metadata, so ignore for now
+            if ";" in match.group(2):
+                return
+            try:
+                val = float(match.group(2).strip())
+            except ValueError:
+                val = match.group(2).strip()
+
+            # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
+            # then set the final key: value pair as normal
+            reduce(lambda d, key: d.setdefault(key, {}), keys, metadata)[
+                match.group(1)
+            ] = val
+
     def _moose_input_parser(
         self,
     ) -> dict[str, typing.Any]:
@@ -197,96 +260,41 @@ class MooseRun(WrappedRun):
         """
         input_files = list(self.moose_file_paths)
         input_metadata = {}
-        # Will make a list of keys for each value to create a nested dict
         keys = []
+        lines = []
 
         while input_files:
             input_file = input_files.pop(0)
-            with open(input_file, "r") as file:
-                for line in file:
-                    # Strip comments while preserving '#' inside quoted values.
-                    # HIT treats quotes as delimiters only when they begin a value.
-                    quote = None
-                    escaped = False
-                    value_boundary = line.find("=")
-                    for index, char in enumerate(line):
-                        if escaped:
-                            escaped = False
-                        elif quote and char == "\\":  # "\\" is one literal backslash.
-                            escaped = True
-                        elif char == quote:
-                            quote = None
-                            value_boundary = index
-                        elif char == "#" and not quote:
-                            line = line[:index]
+            lines += input_file.read_text().splitlines()
+            for line in lines:
+                line = line.strip()
+
+                # Find additional input files to concatenate with this one
+                if line.startswith("!include"):
+                    file_name = line.removeprefix("!include").strip()
+
+                    # MOOSE looks in parent dir of input file first, then in workdir
+                    search_locs = [
+                        input_file.parent,
+                        self.workdir_path if self.workdir_path else pathlib.Path.cwd(),
+                    ]
+
+                    for search_loc in search_locs:
+                        if (
+                            candidate_path := search_loc.joinpath(file_name).resolve()
+                        ).exists():
+                            # Avoid circular includes causing hanging
+                            if candidate_path not in self._included_files:
+                                # Should be parsed next, since !include works as if the new file
+                                # was inserted into the existing file at !include location.
+                                lines = candidate_path.read_text().splitlines() + lines
+                                self._included_files.append(candidate_path)
                             break
-                        # Only a quote at a value boundary opens a quoted string, preserving
-                        # quotes in unquoted values while supporting consecutive quoted strings.
-                        elif (
-                            not quote
-                            and value_boundary >= 0
-                            and char in "'\""
-                            and not line[value_boundary + 1 : index].strip()
-                        ):
-                            quote = char
+                    else:
+                        print(f"Warning: Failed to find included file {file_name}.")
+                else:
+                    self._parse_input_file_line(line, input_metadata, keys)
 
-                    line = line.strip()
-
-                    # Find additional input files to concatenate with this one
-                    if line.startswith("!include"):
-                        file_name = line.removeprefix("!include").strip()
-
-                        # MOOSE looks in parent dir of input file first, then in workdir
-                        search_locs = [
-                            input_file.parent,
-                            self.workdir_path
-                            if self.workdir_path
-                            else pathlib.Path.cwd(),
-                        ]
-
-                        for search_loc in search_locs:
-                            if (
-                                candidate_path := search_loc.joinpath(
-                                    file_name
-                                ).resolve()
-                            ).exists():
-                                # Avoid circular includes causing hanging
-                                if candidate_path not in self._included_files:
-                                    # Should be parsed next, since !include works as if the new file was appended to the existing file
-                                    input_files.insert(0, candidate_path)
-                                    self._included_files.append(candidate_path)
-                                break
-                        else:
-                            print(f"Warning: Failed to find included file {file_name}.")
-
-                    # Find lines which represent ends of blocks
-                    # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
-                    elif re.fullmatch(r"\[[^\w]*\]", line):
-                        # Remove that block from the key - split at the last dot in the key and remove what comes after
-                        keys.pop()
-                    # Find lines which represent starts of new blocks
-                    # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
-                    elif new_key := re.fullmatch(r"\[.+\]", line):
-                        # Add the title of the new block to the key, dot separated notation
-                        # Remove './' from before the titles of blocks if present
-                        # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
-                        keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
-                    # Find lines which represent a key value pair, <key> = <value>
-                    elif match := re.search(r"(\w*)\s*=\s*(.+)", line):
-                        # If the value ends with a ;, it means it is a multi line array input
-                        # Not interested in uploading long inputs like these as metadata, so ignore for now
-                        if ";" in match.group(2):
-                            continue
-                        try:
-                            val = float(match.group(2).strip())
-                        except ValueError:
-                            val = match.group(2).strip()
-
-                        # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
-                        # then set the final key: value pair as normal
-                        reduce(
-                            lambda d, key: d.setdefault(key, {}), keys, input_metadata
-                        )[match.group(1)] = val
         return input_metadata
 
     def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
