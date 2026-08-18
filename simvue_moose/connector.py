@@ -246,11 +246,15 @@ class MooseRun(WrappedRun):
 
                         for search_loc in search_locs:
                             if (
-                                candidate_path := search_loc.joinpath(file_name)
+                                candidate_path := search_loc.joinpath(
+                                    file_name
+                                ).resolve()
                             ).exists():
-                                # Should be parsed next, since !include works as if the new file was appended to the existing file
-                                input_files.insert(0, candidate_path)
-                                self._included_files.append(candidate_path)
+                                # Avoid circular includes causing hanging
+                                if candidate_path not in self._included_files:
+                                    # Should be parsed next, since !include works as if the new file was appended to the existing file
+                                    input_files.insert(0, candidate_path)
+                                    self._included_files.append(candidate_path)
                                 break
                         else:
                             print(f"Warning: Failed to find included file {file_name}.")
