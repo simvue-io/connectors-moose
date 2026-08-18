@@ -683,7 +683,7 @@ class MooseRun(WrappedRun):
             "off",
             "-i",
         ]
-        command += [str(file_path) for file_path in self.moose_file_paths]
+        command += [str(file_path.absolute()) for file_path in self.moose_file_paths]`
         command += format_command_env_vars(self.moose_cli_options)
 
         # Delete .out file, if it exists, so we don't upload old events
