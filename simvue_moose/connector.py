@@ -225,8 +225,8 @@ class MooseRun(WrappedRun):
                                 input_files.insert(0, candidate_path)
                                 self._included_files.append(candidate_path)
                                 break
-
-                        print(f"Warning: Failed to find included file {file_name}.")
+                        else:
+                            print(f"Warning: Failed to find included file {file_name}.")
 
                     # Find lines which represent ends of blocks
                     # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
