@@ -102,6 +102,7 @@ class MooseRun(WrappedRun):
         self.parallel_cli_options: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
+        self._included_files: list[pathlib.Path] = []
         self._file_base: str | None = None
         self._results_prefix: str = None
         self._time = time.time()
@@ -222,8 +223,7 @@ class MooseRun(WrappedRun):
                             ).exists():
                                 # Should be parsed next, since !include works as if the new file was appended to the existing file
                                 input_files.insert(0, candidate_path)
-                                # And so that file is uploaded as an artifact...
-                                self.moose_file_paths.insert(0, candidate_path)
+                                self._included_files.append(candidate_path)
                                 break
 
                         print(f"Warning: Failed to find included file {file_name}.")
@@ -628,7 +628,7 @@ class MooseRun(WrappedRun):
         self._output_dir_path, self._results_prefix = self._find_results_dir()
 
         # Save the MOOSE file for this run to the Simvue server
-        for file_path in self.moose_file_paths:
+        for file_path in self.moose_file_paths + self._included_files:
             if file_path.exists() and (
                 self.upload_files is None or file_path.name in self.upload_files
             ):
