@@ -12,6 +12,7 @@ def _parse_moose_input(tmp_path: pathlib.Path, contents: str) -> dict[str, objec
 
     run = MooseRun.__new__(MooseRun)
     run.moose_file_paths = [input_path]
+    run.workdir_path = None
     return run._moose_input_parser()
 
 
@@ -243,6 +244,40 @@ def test_included_file_parser(folder_setup):
             input_metadata["Materials"]["mat-diffusivity"]["type"]
             == "ADGenericConstantMaterial"
         )
+
+
+def test_circular_includes_do_not_hang(folder_setup):
+    """
+    Test that circular !include statements in MOOSE input files do not cause
+    the parser to hang when extracting metadata.
+    """
+    with MooseRun() as run:
+        run.config(disable_resources_metrics=True)
+        run.init(
+            name="test_circular_includes-%s" % str(uuid.uuid4()),
+            folder=folder_setup,
+        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).parent.joinpath("example_data", "circular_a.i"),
+        ]
+        # This should complete without hanging - circular_b.i includes circular_c.i
+        # which includes circular_a.i, creating a cycle that must be detected
+        input_metadata = run._moose_input_parser()
+
+        # Verify metadata was extracted from the non-circular parts
+        assert "Mesh" in input_metadata
+        assert input_metadata["Mesh"]["generated"]["dim"] == 2
+        assert "Materials" in input_metadata
+        assert (
+            input_metadata["Materials"]["const_mat"]["type"]
+            == "ADGenericConstantMaterial"
+        )
+        assert "Postprocessors" in input_metadata
+        assert (
+            input_metadata["Postprocessors"]["value"]["type"] == "ElementAverageValue"
+        )
+        assert "Executioner" in input_metadata
+        assert input_metadata["Executioner"]["type"] == "Transient"
 
 
 @pytest.mark.parametrize(
