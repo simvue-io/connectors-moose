@@ -1,0 +1,58 @@
+Framework Information:
+MOOSE Version:           git commit e1602b1e72 on 2026-05-29
+LibMesh Version:         aeab0b93c188afdac422e968cacb12bc18806bc1
+PETSc Version:           3.25.1
+SLEPc Version:           3.25.0
+Libtorch Version:        2.11.0
+MFEM Version:            4.9.1
+Current Time:            Mon Aug 17 13:30:10 2026
+Executable Timestamp:    Fri May 29 09:44:39 2026
+
+Input File(s):
+  /temp/diffusion_1a.i
+  /temp/diffusion_1b.i
+  /temp/diffusion_1c.i
+
+Checkpoint:
+  Wall Time Interval:      Every 3600 s
+  Checkpoint:              Outputs/checkpoint
+  # Checkpoints Kept:      2
+  Execute On:              TIMESTEP_END 
+
+Parallelism:
+  Num Processors:          1
+  Num Threads:             1
+
+Mesh: 
+  Parallel Type:           replicated
+  Mesh Dimension:          2
+  Spatial Dimension:       2
+  Nodes:                   121
+  Elems:                   100
+  Num Subdomains:          1
+
+Nonlinear System:
+  Num DOFs:                121
+  Num Local DOFs:          121
+  Variables:               "u" 
+  Finite Element Types:    "LAGRANGE" 
+  Approximation Orders:    "FIRST" 
+
+Execution Information:
+  Executioner:             Steady
+  Solver Mode:             Preconditioned JFNK 
+  PETSc Preconditioner:    hypre boomeramg 
+
+ 0 Nonlinear |R| = 6.164414e+00
+      0 Linear |R| = 6.164414e+00
+      1 Linear |R| = 2.068521e-01
+      2 Linear |R| = 5.232522e-03
+      3 Linear |R| = 1.838945e-04
+      4 Linear |R| = 2.733823e-06
+ 1 Nonlinear |R| = 2.744340e-06
+      0 Linear |R| = 2.744340e-06
+      1 Linear |R| = 7.000912e-08
+      2 Linear |R| = 8.071272e-10
+      3 Linear |R| = 2.661438e-11
+ 2 Nonlinear |R| = 2.662185e-11
+ Solve Converged!
