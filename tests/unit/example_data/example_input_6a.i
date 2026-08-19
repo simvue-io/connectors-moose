@@ -27,11 +27,7 @@
     []
   []
   [Materials]
-    [mat-diffusivity]
-      type = ADGenericConstantMaterial
-      prop_names = 'diffusivity-property'
-      prop_values = '0.98'
-    []
+    !include example_input_6c.i
   []
   [VectorPostprocessors]
     [temps_line]

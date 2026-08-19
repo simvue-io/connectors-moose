@@ -263,11 +263,13 @@ class MooseRun(WrappedRun):
         keys = []
         lines = []
 
+        # Use While and pop() instead of for as we are mutating the lists
         while input_files:
             input_file = input_files.pop(0)
             lines += input_file.read_text().splitlines()
-            for line in lines:
-                line = line.strip()
+
+            while lines:
+                line = lines.pop(0).strip()
 
                 # Find additional input files to concatenate with this one
                 if line.startswith("!include"):

@@ -158,6 +158,20 @@ def test_multi_input_parser(folder_setup):
         ]
         input_metadata = run._moose_input_parser()
 
+        # Check all expected top level keys present
+        # 'Variables' not present, since no key:value pairs exist under it
+        assert list(input_metadata.keys()) == [
+            "Mesh",
+            "Kernels",
+            "Materials",
+            "VectorPostprocessors",
+            "Postprocessors",
+            "Problem",
+            "Executioner",
+            "Outputs",
+            "BCs",
+        ]
+
         # Check metadata from input file A is present
         assert input_metadata["Mesh"]["generated"]["dim"] == 3
         assert (
@@ -199,6 +213,20 @@ def test_included_file_parser(folder_setup):
         ]
         input_metadata = run._moose_input_parser()
 
+        # Check all expected top level keys present
+        # 'Variables' not present, since no key:value pairs exist under it
+        assert list(input_metadata.keys()) == [
+            "BCs",
+            "Mesh",
+            "Kernels",
+            "Materials",
+            "VectorPostprocessors",
+            "Postprocessors",
+            "Problem",
+            "Executioner",
+            "Outputs",
+        ]
+
         # Check metadata from input file A is present
         assert input_metadata["Mesh"]["generated"]["dim"] == 3
         assert (
@@ -209,6 +237,12 @@ def test_included_file_parser(folder_setup):
         # Check metadata added from file B
         assert input_metadata["BCs"]["cold"]["variable"] == "T"
         assert input_metadata["BCs"]["hot"]["value"] == 1000
+
+        # Check metadata inserted from file C in correct place
+        assert (
+            input_metadata["Materials"]["mat-diffusivity"]["type"]
+            == "ADGenericConstantMaterial"
+        )
 
 
 @pytest.mark.parametrize(
