@@ -1,6 +1,7 @@
 from simvue_moose.connector import MooseRun
 from simvue.api.objects.run import Run
 import pathlib
+import sys
 from unittest.mock import patch, PropertyMock
 import tempfile
 import uuid
@@ -44,6 +45,9 @@ def test_moose_file_upload(folder_setup):
         )
 
     client = simvue.Client()
+    assert "Simulation Complete!" in {
+        event["message"] for event in client.get_events(run_id)
+    }
 
     # Retrieve Exodus and CSV file from server and compare with local copies
     with tempfile.TemporaryDirectory(prefix="moose_test") as temp_dir:
@@ -82,6 +86,30 @@ def test_moose_file_upload_specific_files(folder_setup):
         assert not pathlib.Path(temp_dir).joinpath("moose_test.e").exists()
         with pytest.raises(ObjectNotFoundError):
             client.get_artifacts_as_files(run_id, "input", temp_dir)
+
+
+@pytest.mark.usefixtures("offline_cache_setup")
+def test_failed_moose_process_logs_failure(tmp_path: pathlib.Path):
+    input_file = tmp_path / "simulation.i"
+    input_file.write_text("import os\nos._exit(1)\n", encoding="utf-8")
+
+    run = MooseRun(mode="offline")
+    with (
+        patch.object(run, "log_event", wraps=run.log_event) as log_event,
+        pytest.raises(SystemExit, match="1"),
+        run,
+    ):
+        run.config(disable_resources_metrics=True)
+        run.init(name="test_failed_moose_process", folder="/test-moose")
+        run.launch(
+            moose_application_path=pathlib.Path(sys.executable),
+            moose_file_path=input_file,
+            upload_files=[],
+        )
+
+    events = {call.args[0] for call in log_event.call_args_list}
+    assert "Simulation Failed!" in events
+    assert "Simulation Complete!" not in events
 
 
 def mock_aborted_moose_process(self, *_, **__):
