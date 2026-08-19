@@ -3,8 +3,8 @@
 [Mesh]
   type = GeneratedMesh
   dim = 2
-  nx = 20
-  ny = 20
+  nx = 10
+  ny = 10
 []
 
 [BCs]
