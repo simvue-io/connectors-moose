@@ -246,6 +246,48 @@ def test_included_file_parser(folder_setup):
         )
 
 
+def test_included_file_parser_subdir_repeated(folder_setup):
+    with MooseRun() as run:
+        run.config(disable_resources_metrics=True)
+        run.init(
+            name="test_included_input_parser-%s" % str(uuid.uuid4()),
+            folder=folder_setup,
+        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).parent.joinpath("example_data", "example_input_7.i"),
+        ]
+        input_metadata = run._moose_input_parser()
+
+        # Check all expected top level keys present
+        # 'Variables' not present, since no key:value pairs exist under it
+        assert list(input_metadata.keys()) == [
+            "BCs",
+            "Mesh",
+            "Kernels",
+            "Materials",
+            "VectorPostprocessors",
+            "Postprocessors",
+            "Problem",
+            "Executioner",
+            "Outputs",
+        ]
+
+        # Check metadata from base input file is present
+        assert input_metadata["Mesh"]["generated"]["dim"] == 3
+        assert (
+            input_metadata["VectorPostprocessors"]["temps_line"]["type"]
+            == "PointValueSampler"
+        )
+
+        # Check metadata added from file A
+        assert input_metadata["BCs"]["cold"]["boundary"] == "right"
+        assert input_metadata["BCs"]["hot"]["value"] == 1000
+
+        # Check metadata inserted from file B in correct places
+        assert input_metadata["BCs"]["hot"]["type"] == "DirichletBC"
+        assert input_metadata["BCs"]["cold"]["type"] == "DirichletBC"
+
+
 def test_circular_includes_do_not_hang(folder_setup):
     """
     Test that circular !include statements in MOOSE input files do not cause
@@ -262,22 +304,10 @@ def test_circular_includes_do_not_hang(folder_setup):
         ]
         # This should complete without hanging - circular_b.i includes circular_c.i
         # which includes circular_a.i, creating a cycle that must be detected
-        input_metadata = run._moose_input_parser()
-
-        # Verify metadata was extracted from the non-circular parts
-        assert "Mesh" in input_metadata
-        assert input_metadata["Mesh"]["generated"]["dim"] == 2
-        assert "Materials" in input_metadata
-        assert (
-            input_metadata["Materials"]["const_mat"]["type"]
-            == "ADGenericConstantMaterial"
-        )
-        assert "Postprocessors" in input_metadata
-        assert (
-            input_metadata["Postprocessors"]["value"]["type"] == "ElementAverageValue"
-        )
-        assert "Executioner" in input_metadata
-        assert input_metadata["Executioner"]["type"] == "Transient"
+        with pytest.raises(
+            ValueError, match="Circular import detected in MOOSE input files!"
+        ):
+            run._moose_input_parser()
 
 
 @pytest.mark.parametrize(

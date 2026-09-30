@@ -180,17 +180,13 @@ class MooseRun(WrappedRun):
         # Otherwise, relative path, should be relative to working dir
         return workdir.joinpath(dir_path).resolve(), results_prefix
 
-    def _parse_input_file_line(
-        self,
-        line: str,
-        metadata: dict[str, typing.Any],
-        keys: list[str],
-    ) -> None:
+    def _strip_input_file_line_comments(self, line: str) -> str:
         # Strip comments while preserving '#' inside quoted values.
         # HIT treats quotes as delimiters only when they begin a value.
         quote = None
         escaped = False
         value_boundary = line.find("=")
+        line = line.strip()
         for index, char in enumerate(line):
             if escaped:
                 escaped = False
@@ -212,8 +208,14 @@ class MooseRun(WrappedRun):
             ):
                 quote = char
 
-        line = line.strip()
+        return line.strip()
 
+    def _parse_input_file_line(
+        self,
+        line: str,
+        metadata: dict[str, typing.Any],
+        keys: list[str],
+    ) -> None:
         # Find lines which represent ends of blocks
         # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
         if re.fullmatch(r"\[[^\w]*\]", line):
@@ -243,6 +245,55 @@ class MooseRun(WrappedRun):
                 match.group(1)
             ] = val
 
+    def _parse_input_file(
+        self,
+        input_file: pathlib.Path,
+        active_files: list[pathlib.Path],
+        input_metadata: dict[str, typing.Any],
+        keys: list[str],
+    ) -> None:
+        for line in input_file.read_text().splitlines():
+            line = self._strip_input_file_line_comments(line)
+            if not line.startswith("!include"):
+                self._parse_input_file_line(line, input_metadata, keys)
+                continue
+            # Find additional input files to concatenate with this one
+            file_name = line.removeprefix("!include").strip()
+
+            # MOOSE looks in parent dir of current file first
+            search_locs = [input_file.parent]
+            # then parent dir of input file
+            if (
+                active_files
+                and active_files[0].parent.resolve() != input_file.parent.resolve()
+            ):
+                search_locs.append(active_files[0].parent)
+            # Then working dir
+            search_locs.append(
+                self.workdir_path if self.workdir_path else pathlib.Path.cwd()
+            )
+
+            for search_loc in search_locs:
+                if (
+                    candidate_path := search_loc.joinpath(file_name).resolve()
+                ).is_file():
+                    # Avoid circular includes causing hanging
+                    if candidate_path in active_files:
+                        raise ValueError(
+                            "Circular import detected in MOOSE input files!"
+                        )
+                    self._included_files.append(candidate_path)
+                    active_files.append(candidate_path)
+                    try:
+                        self._parse_input_file(
+                            candidate_path, active_files, input_metadata, keys
+                        )
+                    finally:
+                        active_files.pop()
+                    break
+            else:
+                print(f"Warning: Failed to find included file {file_name}.")
+
     def _moose_input_parser(
         self,
     ) -> dict[str, typing.Any]:
@@ -258,44 +309,13 @@ class MooseRun(WrappedRun):
             The combined MOOSE input file as a dictionary of metadata
 
         """
-        input_files = list(self.moose_file_paths)
-        input_metadata = {}
-        keys = []
-        lines = []
+        active_files: list[pathlib.Path] = []
+        input_metadata: dict[str, typing.Any] = {}
+        keys: list[str] = []
 
-        # Use While and pop() instead of for as we are mutating the lists
-        while input_files:
-            input_file = input_files.pop(0)
-            lines += input_file.read_text().splitlines()
-
-            while lines:
-                line = lines.pop(0).strip()
-
-                # Find additional input files to concatenate with this one
-                if line.startswith("!include"):
-                    file_name = line.removeprefix("!include").strip()
-
-                    # MOOSE looks in parent dir of input file first, then in workdir
-                    search_locs = [
-                        input_file.parent,
-                        self.workdir_path if self.workdir_path else pathlib.Path.cwd(),
-                    ]
-
-                    for search_loc in search_locs:
-                        if (
-                            candidate_path := search_loc.joinpath(file_name).resolve()
-                        ).exists():
-                            # Avoid circular includes causing hanging
-                            if candidate_path not in self._included_files:
-                                # Should be parsed next, since !include works as if the new file
-                                # was inserted into the existing file at !include location.
-                                lines = candidate_path.read_text().splitlines() + lines
-                                self._included_files.append(candidate_path)
-                            break
-                    else:
-                        print(f"Warning: Failed to find included file {file_name}.")
-                else:
-                    self._parse_input_file_line(line, input_metadata, keys)
+        for input_file in self.moose_file_paths:
+            active_files = [input_file.resolve()]
+            self._parse_input_file(input_file, active_files, input_metadata, keys)
 
         return input_metadata
 
@@ -780,8 +800,14 @@ class MooseRun(WrappedRun):
         if self.upload_files is None:
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
+            input_file_names = {
+                file_path.name
+                for file_path in self.moose_file_paths + self._included_files
+            }
             files_to_upload = (
-                self._output_dir_path.joinpath(file) for file in self.upload_files
+                self._output_dir_path.joinpath(file_name)
+                for file_name in self.upload_files
+                if file_name not in input_file_names
             )
 
         for file in files_to_upload:
