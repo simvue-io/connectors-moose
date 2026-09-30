@@ -59,9 +59,9 @@ def test_find_results_dir(
         run.workdir_path = (
             pathlib.Path(working_dir) if working_dir else pathlib.Path.cwd()
         )
-        run.moose_file_path = pathlib.Path(__file__).joinpath(
-            "example_data", "example_input_1.i"
-        )
+        run.moose_file_paths = [
+            pathlib.Path(__file__).joinpath("example_data", "example_input_1.i"),
+        ]
         run._file_base = file_base
         output_dir, prefix = run._find_results_dir()
 
