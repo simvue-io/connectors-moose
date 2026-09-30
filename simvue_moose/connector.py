@@ -185,8 +185,8 @@ class MooseRun(WrappedRun):
         # HIT treats quotes as delimiters only when they begin a value.
         quote = None
         escaped = False
-        value_boundary = line.find("=")
         line = line.strip()
+        value_boundary = line.find("=")
         for index, char in enumerate(line):
             if escaped:
                 escaped = False
