@@ -91,7 +91,7 @@ class MooseRun(WrappedRun):
 
         """
         self.moose_application_path: pydantic.FilePath = None
-        self.moose_file_path: pydantic.FilePath = None
+        self.moose_file_paths: list[pydantic.FilePath] = None
         self.workdir_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
@@ -102,6 +102,7 @@ class MooseRun(WrappedRun):
         self.parallel_cli_options: typing.Dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
+        self._included_files: list[pathlib.Path] = []
         self._file_base: str | None = None
         self._results_prefix: str = None
         self._time = time.time()
@@ -154,7 +155,8 @@ class MooseRun(WrappedRun):
                     "Warning: No file_base specified in MOOSE file - results will be generated in parent directory of input file."
                 )
             # Uses directory containing input file, with moose file name stem as prefix
-            return self.moose_file_path.parent, self.moose_file_path.stem
+            # If multiple files provided, uses last one
+            return self.moose_file_paths[-1].parent, self.moose_file_paths[-1].stem
 
         # Try splitting on final slash
         split = self._file_base.rsplit("/", maxsplit=1)
@@ -178,81 +180,143 @@ class MooseRun(WrappedRun):
         # Otherwise, relative path, should be relative to working dir
         return workdir.joinpath(dir_path).resolve(), results_prefix
 
-    def _moose_input_parser(self, input_file: pathlib.Path) -> dict[str, typing.Any]:
-        """Parse MOOSE input file, and create a dictionary of metadata with dot notation representing indentation of keys.
+    def _strip_input_file_line_comments(self, line: str) -> str:
+        # Strip comments while preserving '#' inside quoted values.
+        # HIT treats quotes as delimiters only when they begin a value.
+        quote = None
+        escaped = False
+        line = line.strip()
+        value_boundary = line.find("=")
+        for index, char in enumerate(line):
+            if escaped:
+                escaped = False
+            elif quote and char == "\\":  # "\\" is one literal backslash.
+                escaped = True
+            elif char == quote:
+                quote = None
+                value_boundary = index
+            elif char == "#" and not quote:
+                line = line[:index]
+                break
+            # Only a quote at a value boundary opens a quoted string, preserving
+            # quotes in unquoted values while supporting consecutive quoted strings.
+            elif (
+                not quote
+                and value_boundary >= 0
+                and char in "'\""
+                and not line[value_boundary + 1 : index].strip()
+            ):
+                quote = char
 
-        Parameters
-        ----------
-        input_file: pathlib.Path
-            The path to the MOOSE input file
+        return line.strip()
+
+    def _parse_input_file_line(
+        self,
+        line: str,
+        metadata: dict[str, typing.Any],
+        keys: list[str],
+    ) -> None:
+        # Find lines which represent ends of blocks
+        # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
+        if re.fullmatch(r"\[[^\w]*\]", line):
+            # Remove that block from the key - split at the last dot in the key and remove what comes after
+            keys.pop()
+        # Find lines which represent starts of new blocks
+        # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
+        elif new_key := re.fullmatch(r"\[.+\]", line):
+            # Add the title of the new block to the key, dot separated notation
+            # Remove './' from before the titles of blocks if present
+            # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
+            keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
+        # Find lines which represent a key value pair, <key> = <value>
+        elif match := re.search(r"(\w*)\s*=\s*(.+)", line):
+            # If the value ends with a ;, it means it is a multi line array input
+            # Not interested in uploading long inputs like these as metadata, so ignore for now
+            if ";" in match.group(2):
+                return
+            try:
+                val = float(match.group(2).strip())
+            except ValueError:
+                val = match.group(2).strip()
+
+            # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
+            # then set the final key: value pair as normal
+            reduce(lambda d, key: d.setdefault(key, {}), keys, metadata)[
+                match.group(1)
+            ] = val
+
+    def _parse_input_file(
+        self,
+        input_file: pathlib.Path,
+        active_files: list[pathlib.Path],
+        input_metadata: dict[str, typing.Any],
+        keys: list[str],
+    ) -> None:
+        for line in input_file.read_text().splitlines():
+            line = self._strip_input_file_line_comments(line)
+            if not line.startswith("!include"):
+                self._parse_input_file_line(line, input_metadata, keys)
+                continue
+            # Find additional input files to concatenate with this one
+            file_name = line.removeprefix("!include").strip()
+
+            # MOOSE looks in parent dir of current file first
+            search_locs = [input_file.parent]
+            # then parent dir of input file
+            if (
+                active_files
+                and active_files[0].parent.resolve() != input_file.parent.resolve()
+            ):
+                search_locs.append(active_files[0].parent)
+            # Then working dir
+            search_locs.append(
+                self.workdir_path if self.workdir_path else pathlib.Path.cwd()
+            )
+
+            for search_loc in search_locs:
+                if (
+                    candidate_path := search_loc.joinpath(file_name).resolve()
+                ).is_file():
+                    # Avoid circular includes causing hanging
+                    if candidate_path in active_files:
+                        raise ValueError(
+                            "Circular import detected in MOOSE input files!"
+                        )
+                    self._included_files.append(candidate_path)
+                    active_files.append(candidate_path)
+                    try:
+                        self._parse_input_file(
+                            candidate_path, active_files, input_metadata, keys
+                        )
+                    finally:
+                        active_files.pop()
+                    break
+            else:
+                print(f"Warning: Failed to find included file {file_name}.")
+
+    def _moose_input_parser(
+        self,
+    ) -> dict[str, typing.Any]:
+        """Parse MOOSE input files, and create a dictionary of nested metadata.
+
+        Note in the case of multiple input files being provided with duplicate keys,
+        later files should override values from earlier ones.
+        This happens on a per value basis, not a per heading / section basis.
 
         Returns
         -------
         dict[str, typing.Any]
-            The MOOSE input file as a dictionary of metadata
+            The combined MOOSE input file as a dictionary of metadata
 
         """
-        input_metadata = {}
-        # Will make a list of keys for each value to create a nested dict
-        keys = []
+        active_files: list[pathlib.Path] = []
+        input_metadata: dict[str, typing.Any] = {}
+        keys: list[str] = []
 
-        with open(input_file, "r") as file:
-            for line in file:
-                # Strip comments while preserving '#' inside quoted values.
-                # HIT treats quotes as delimiters only when they begin a value.
-                quote = None
-                escaped = False
-                value_boundary = line.find("=")
-                for index, char in enumerate(line):
-                    if escaped:
-                        escaped = False
-                    elif quote and char == "\\":  # "\\" is one literal backslash.
-                        escaped = True
-                    elif char == quote:
-                        quote = None
-                        value_boundary = index
-                    elif char == "#" and not quote:
-                        line = line[:index]
-                        break
-                    # Only a quote at a value boundary opens a quoted string, preserving
-                    # quotes in unquoted values while supporting consecutive quoted strings.
-                    elif (
-                        not quote
-                        and value_boundary >= 0
-                        and char in "'\""
-                        and not line[value_boundary + 1 : index].strip()
-                    ):
-                        quote = char
+        for input_file in self.moose_file_paths:
+            active_files = [input_file.resolve()]
+            self._parse_input_file(input_file, active_files, input_metadata, keys)
 
-                line = line.strip()
-                # Find lines which represent ends of blocks
-                # Could be similar to [] or [../] - so check for square brackets with any number of non alphanumeric chars between
-                if re.fullmatch(r"\[[^\w]*\]", line):
-                    # Remove that block from the key - split at the last dot in the key and remove what comes after
-                    keys.pop()
-                # Find lines which represent starts of new blocks
-                # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
-                elif new_key := re.fullmatch(r"\[.+\]", line):
-                    # Add the title of the new block to the key, dot separated notation
-                    # Remove './' from before the titles of blocks if present
-                    # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
-                    keys.append(f"{new_key.group().strip('[]/').replace('./', '')}")
-                # Find lines which represent a key value pair, <key> = <value>
-                elif match := re.search(r"(\w*)\s*=\s*(.+)", line):
-                    # If the value ends with a ;, it means it is a multi line array input
-                    # Not interested in uploading long inputs like these as metadata, so ignore for now
-                    if ";" in match.group(2):
-                        continue
-                    try:
-                        val = float(match.group(2).strip())
-                    except ValueError:
-                        val = match.group(2).strip()
-
-                    # Create nested dict by reducing list of keys and creating a nested dict if not already existing,
-                    # then set the final key: value pair as normal
-                    reduce(lambda d, key: d.setdefault(key, {}), keys, input_metadata)[
-                        match.group(1)
-                    ] = val
         return input_metadata
 
     def _moose_input_callback(self, input_metadata: dict[str, typing.Any]) -> None:
@@ -261,12 +325,12 @@ class MooseRun(WrappedRun):
         Parameters
         ----------
         input_metadata: dict[str, typing.Any]
-            The metadata from the MOOSE input file
+            The metadata from the MOOSE input files
 
         """
-        # Find the location to output files
-        self._file_base = input_metadata.get("Outputs", {}).get("file_base", None)
-        self._output_dir_path, self._results_prefix = self._find_results_dir()
+        # Find the location to output files, subsequent files override settings from previous ones (if set)
+        if _file_base := input_metadata.get("Outputs", {}).get("file_base", None):
+            self._file_base = _file_base
 
         if _executioner_metadata := input_metadata.get("Executioner", None):
             if _dt := _executioner_metadata.get("dt", None):
@@ -279,12 +343,8 @@ class MooseRun(WrappedRun):
 
             if _executioner_metadata.get("type", "").lower() == "steady":
                 self._steady = True
-        else:
-            print(
-                "No Executioner block detected in your MOOSE input file - falling back to log times and steps."
-            )
 
-        self.update_metadata({self.moose_file_path.stem: input_metadata})
+        self.update_metadata({"input_file": input_metadata})
 
     def _log_header_parser(self, line: str) -> None:
         """Parse a line from the header of the MOOSE log file and add the data to the header metadata dictionary.
@@ -616,6 +676,24 @@ class MooseRun(WrappedRun):
             timestamp=timestamp if timestamp else None,
         )
 
+    def _upload_parse_input_files(self) -> None:
+        """Upload as artifact, parse & upload metadata from each MOOSE input file."""
+        # Parse the MOOSE input files
+        input_metadata = self._moose_input_parser()
+
+        # Extract useful information
+        self._moose_input_callback(input_metadata)
+
+        # Determine output location
+        self._output_dir_path, self._results_prefix = self._find_results_dir()
+
+        # Save the MOOSE file for this run to the Simvue server
+        for file_path in self.moose_file_paths + self._included_files:
+            if file_path.exists() and (
+                self.upload_files is None or file_path.name in self.upload_files
+            ):
+                self.save_file(file_path, category="input")
+
     def _pre_simulation(self):
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
@@ -631,11 +709,7 @@ class MooseRun(WrappedRun):
             # Ensure workdir path exists
             self.workdir_path.mkdir(parents=True, exist_ok=True)
 
-        # Save the MOOSE file for this run to the Simvue server
-        if pathlib.Path(self.moose_file_path).exists() and (
-            self.upload_files is None or self.moose_file_path.name in self.upload_files
-        ):
-            self.save_file(self.moose_file_path, category="input")
+        self._upload_parse_input_files()
 
         # Save the MOOSE Makefile
         if (
@@ -647,12 +721,6 @@ class MooseRun(WrappedRun):
                 pathlib.Path(self.moose_application_path).parent.joinpath("Makefile"),
                 category="input",
             )
-
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Extract useful information
-        self._moose_input_callback(input_metadata)
 
         # Add the MOOSE simulation as a process, so that Simvue can abort it if alerts begin to fire
         command = []
@@ -671,11 +739,11 @@ class MooseRun(WrappedRun):
             command += format_command_env_vars(self.parallel_cli_options)
         command += [
             str(self.moose_application_path.absolute()),
-            "-i",
-            str(self.moose_file_path.absolute()),
             "--color",
             "off",
+            "-i",
         ]
+        command += [str(file_path.absolute()) for file_path in self.moose_file_paths]
         command += format_command_env_vars(self.moose_cli_options)
 
         # Delete .out file, if it exists, so we don't upload old events
@@ -732,16 +800,20 @@ class MooseRun(WrappedRun):
         if self.upload_files is None:
             files_to_upload = self._output_dir_path.glob(f"{self._results_prefix}*")
         else:
+            input_file_names = {
+                file_path.name
+                for file_path in self.moose_file_paths + self._included_files
+            }
             files_to_upload = (
-                self._output_dir_path.joinpath(file)
-                for file in self.upload_files
-                if file != self.moose_file_path.name
+                self._output_dir_path.joinpath(file_name)
+                for file_name in self.upload_files
+                if file_name not in input_file_names
             )
 
         for file in files_to_upload:
-            if (
-                file.is_dir()
-                or file.absolute() == pathlib.Path(self.moose_file_path).absolute()
+            if file.is_dir() or any(
+                file.absolute() == file_path.absolute()
+                for file_path in self.moose_file_paths + self._included_files
             ):
                 continue
             self.save_file(file, category="output")
@@ -753,7 +825,7 @@ class MooseRun(WrappedRun):
     def launch(
         self,
         moose_application_path: pydantic.FilePath,
-        moose_file_path: pydantic.FilePath,
+        moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
         workdir_path: str | pathlib.Path | None = None,
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
@@ -774,8 +846,8 @@ class MooseRun(WrappedRun):
         ----------
         moose_application_path : pydantic.FilePath
             Path to the MOOSE application file
-        moose_file_path : pydantic.FilePath
-            Path to the MOOSE configuration file
+        moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
+            Path, or list of paths, to the MOOSE configuration file(s)
         workdir_path : str | pathlib.Path | None, optional
             Path to a directory which you would like MOOSE to run in, by default None
             If this directory does not exist, it will be created.
@@ -803,9 +875,19 @@ class MooseRun(WrappedRun):
             These will be applied to whichever parallel job launcher is found first.
             Looks for `srun` if running on a SLURM system, then `mpiexec`, then `mpirun`.
 
+        Raises
+        ------
+        ValueError
+            Raised if no MOOSE input files provided to connector
+
         """
         self.moose_application_path = moose_application_path
-        self.moose_file_path = moose_file_path
+        self.moose_file_paths = (
+            moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
+        )
+        if not moose_file_path:
+            raise ValueError("At least one MOOSE input file path must be provided!")
+
         self.workdir_path = pathlib.Path(workdir_path) if workdir_path else None
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
@@ -821,7 +903,7 @@ class MooseRun(WrappedRun):
     @pydantic.validate_call
     def load(
         self,
-        moose_file_path: pydantic.FilePath,
+        moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
         results_dir: pydantic.DirectoryPath | None = None,
         log_path: pydantic.FilePath | None = None,
         upload_files: list[str] | None = None,
@@ -832,7 +914,7 @@ class MooseRun(WrappedRun):
 
         Parameters
         ----------
-        moose_file_path : pydantic.FilePath
+        moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
             Path to the MOOSE configuration file
         results_dir : pydantic.DirectoryPath | None, optional
             A path to a directory containing MOOSE simulation results to upload
@@ -854,27 +936,26 @@ class MooseRun(WrappedRun):
 
         Raises
         ------
+        ValueError
+            Raised if no MOOSE input files provided to connector
         FileNotFoundError
             Raised if no results directory is found at expected location
         RuntimeError
             Found if more than one potential console log file is found, and the user did not specify the one to use.
 
         """
-        self.moose_file_path = moose_file_path
+        self.moose_file_paths = (
+            moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
+        )
+        if not moose_file_path:
+            raise ValueError("At least one MOOSE input file path must be provided!")
+
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
         self._loading_historic_run = True
 
-        # Save the MOOSE file for this run to the Simvue server
-        if self.upload_files is None or self.moose_file_path.name in self.upload_files:
-            self.save_file(self.moose_file_path, category="input")
-
-        # Parse the MOOSE input file
-        input_metadata = self._moose_input_parser(pathlib.Path(self.moose_file_path))
-
-        # Extract useful information
-        self._moose_input_callback(input_metadata)
+        self._upload_parse_input_files()
 
         if results_dir:
             if (

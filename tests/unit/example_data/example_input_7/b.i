@@ -1,0 +1,2 @@
+type = DirichletBC
+variable = T

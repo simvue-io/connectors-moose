@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 dependencies = [
-    "simvue-connector (>=1.1.1)",
+    "simvue-connector (>=1.1.2)",
     "pandas (>=2.2.3)",
     "numpy (>=2.0.0,<3.0.0)",
     ]
@@ -42,8 +42,10 @@ homepage = "https://simvue.io"
 repository = "https://github.com/simvue-io/connectors-moose"
 documentation = "https://docs.simvue.io"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^9.0.3"
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
