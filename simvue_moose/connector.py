@@ -133,7 +133,9 @@ class MooseRun(WrappedRun):
         self._postprocessor_block = False
         self._header_metadata = {}
         self._exodus_last_processed_time: float | None = None
-        self._grids_defined: list[str] = []
+        self._grids_defined: dict[
+            str, tuple[list[str], numpy.ndarray, numpy.ndarray]
+        ] = {}
         self._slice_step: int = 0
         self._last_parse_time: float = datetime.now(timezone.utc).timestamp()
 
@@ -764,7 +766,11 @@ class MooseRun(WrappedRun):
                     # Log message?
                     continue
                 for axis, fixed_dims in slice_info.items():
-                    ax_labels, ax1_ticks, ax2_ticks = get_varying_axes_ticks(mesh, axis)
+                    if (grid_name := f"{var_name}.{axis}") not in self._grids_defined:
+                        self._grids_defined[grid_name] = get_varying_axes_ticks(
+                            mesh, axis
+                        )
+                    ax_labels, ax1_ticks, ax2_ticks = self._grids_defined[grid_name]
                     ax1_grid, ax2_grid = numpy.meshgrid(ax1_ticks, ax2_ticks)
 
                     for fixed_dim in fixed_dims:
@@ -800,7 +806,7 @@ class MooseRun(WrappedRun):
                         value = str(round(fixed_dim, 3)).replace(".", "_")
                         metric_name = f"{var_name}.{axis}.{value}"
 
-                        if metric_name not in self._grids_defined:
+                        if metric_name not in self._grids:
                             self.assign_metric_to_grid(
                                 metric_name=metric_name,
                                 axes_ticks=[
