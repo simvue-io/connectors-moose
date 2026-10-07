@@ -4,7 +4,6 @@ This module provides functionality for using Simvue to track and monitor a MOOSE
 """
 
 import csv
-import datetime
 import os
 import pathlib
 import re
@@ -12,11 +11,11 @@ import shutil
 import threading
 import time
 import typing
+from datetime import datetime, timezone
 from functools import reduce
 from itertools import islice
 
 import numpy
-import timezone
 
 try:
     from typing import Self
