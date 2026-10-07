@@ -720,8 +720,11 @@ class MooseRun(WrappedRun):
             Whether the slice was successfuly extracted
 
         """
-        _exodus_path = pathlib.Path(f"{self._output_dir_path / self._results_prefix}.e")
-        if not self.extract_exodus_slices or not _exodus_path.exists():
+        _exodus_path = next(
+            self._output_dir_path.glob(f"{self._results_prefix}*.e"),
+            None,
+        )
+        if not self.extract_exodus_slices or not _exodus_path:
             return True
         try:
             reader: pyvista.ExodusIIReader = pyvista.get_reader(_exodus_path)
