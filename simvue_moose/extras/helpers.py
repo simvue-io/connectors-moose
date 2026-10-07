@@ -60,7 +60,7 @@ def get_varying_axes_ticks(
     ax2 = mesh.points[:, varying_axes_idx[1]]
     aspect_ratio = abs(ax2.max() - ax2.min()) / abs(ax1.max() - ax1.min())
     ax1_ticks = numpy.linspace(
-        ax1.min(), ax1.max(), 100
+        ax1.min(), ax1.max(), 200
     )  # TODO more logical sizes here?
-    ax2_ticks = numpy.linspace(ax2.min(), ax2.max(), int(100 * aspect_ratio))
+    ax2_ticks = numpy.linspace(ax2.min(), ax2.max(), int(200 * aspect_ratio))
     return list(varying_axes.keys()), ax1_ticks, ax2_ticks
