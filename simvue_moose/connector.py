@@ -782,9 +782,9 @@ class MooseRun(WrappedRun):
                         if not check_within_bounds(fixed_dim, bounds, axis):
                             # Maybe print log message here
                             continue
-                        dims = [0, 0, 0]
-                        dims[AXES_IDX[axis]] = fixed_dim
-                        mesh_slice = mesh.slice(axis, dims)
+                        origin = [0, 0, 0]
+                        origin[AXES_IDX[axis]] = fixed_dim
+                        mesh_slice = mesh.slice(axis, origin=origin)
                         if mesh_slice.is_empty:
                             continue
 
