@@ -765,17 +765,6 @@ class MooseRun(WrappedRun):
                     continue
                 for axis, fixed_dims in slice_info.items():
                     ax_labels, ax1_ticks, ax2_ticks = get_varying_axes_ticks(mesh, axis)
-                    if (grid_name := f"{var_name}.{axis}") not in self._grids_defined:
-                        self.assign_metric_to_grid(
-                            metric_name=grid_name,  # This wont exist but doesnt do any harm afalk
-                            grid_name=grid_name,
-                            axes_ticks=[
-                                ax1_ticks.tolist(),
-                                ax2_ticks.tolist(),
-                            ],
-                            axes_labels=ax_labels,
-                        )
-                        self._grids_defined.append(grid_name)
                     ax1_grid, ax2_grid = numpy.meshgrid(ax1_ticks, ax2_ticks)
 
                     for fixed_dim in fixed_dims:
@@ -805,7 +794,12 @@ class MooseRun(WrappedRun):
 
                         if metric_name not in self._grids_defined:
                             self.assign_metric_to_grid(
-                                metric_name=metric_name, grid_name=grid_name
+                                metric_name=metric_name,
+                                axes_ticks=[
+                                    ax1_ticks.tolist(),
+                                    ax2_ticks.tolist(),
+                                ],
+                                axes_labels=ax_labels,
                             )
                             self._grids_defined.append(metric_name)
                         self.log_metrics(
