@@ -106,7 +106,7 @@ class MooseRun(WrappedRun):
         self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
         self.extract_exodus_slices: (
-            dict[str, dict[typing.Literal["x", "y", "z"] : list[float]]] | None
+            dict[str, dict[typing.Literal["x", "y", "z"], list[float]]] | None
         ) = None
         self.moose_cli_options: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
@@ -981,7 +981,7 @@ class MooseRun(WrappedRun):
         upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
         extract_exodus_slices: dict[
-            str, dict[typing.Literal["x", "y", "z"] : list[float]]
+            str, dict[typing.Literal["x", "y", "z"], list[float]]
         ]
         | None = None,
         moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
@@ -1018,7 +1018,7 @@ class MooseRun(WrappedRun):
             Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        extract_exodus_slices : dict[str, dict[typing.Literal["x", "y", "z"]: list[float]]] | None, optional
+        extract_exodus_slices : dict[str, dict[typing.Literal["x", "y", "z"], list[float]]] | None, optional
             2D slices to extract from the Exodus file and upload as metrics, by default None (disabled)
         moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any options to be passed to MOOSE on startup, by default None
