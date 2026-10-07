@@ -787,7 +787,15 @@ class MooseRun(WrappedRun):
                         grid_points = numpy.column_stack(c_stack)
                         grid = pyvista.PolyData(grid_points)
                         sampled = grid.sample(mesh_slice)
-                        vals = sampled[var_name].reshape(ax1_grid.shape)
+                        valid = numpy.asarray(
+                            sampled["vtkValidPointMask"],
+                            dtype=bool,
+                        )
+                        if not valid.any():
+                            continue  # add message here
+                        vals = numpy.asarray(sampled[var_name], dtype=float)
+                        vals[~valid] - numpy.nan
+                        vals = vals.reshape(ax1_grid.shape)
 
                         value = str(round(fixed_dim, 3)).replace(".", "_")
                         metric_name = f"{var_name}.{axis}.{value}"
