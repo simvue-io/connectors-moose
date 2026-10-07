@@ -815,7 +815,6 @@ class MooseRun(WrappedRun):
                                 ],
                                 axes_labels=ax_labels,
                             )
-                            self._grids_defined.append(metric_name)
                         self.log_metrics(
                             {
                                 metric_name: vals,
