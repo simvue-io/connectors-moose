@@ -4,16 +4,19 @@ This module provides functionality for using Simvue to track and monitor a MOOSE
 """
 
 import csv
+import datetime
 import os
 import pathlib
 import re
 import shutil
+import threading
 import time
 import typing
 from functools import reduce
 from itertools import islice
 
 import numpy
+import timezone
 
 try:
     from typing import Self
@@ -24,9 +27,16 @@ import multiparser.parsing.file as mp_file_parser
 import multiparser.parsing.tail as mp_tail_parser
 import pandas
 import pydantic
+import pyvista
 import simvue
 from simvue_connector.connector import WrappedRun
 from simvue_connector.extras.create_command import format_command_env_vars
+
+from simvue_moose.extras.helpers import (
+    AXES_IDX,
+    check_within_bounds,
+    get_varying_axes_ticks,
+)
 
 
 class MooseRun(WrappedRun):
@@ -96,10 +106,14 @@ class MooseRun(WrappedRun):
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
+        self.extract_exodus_slices: (
+            dict[str, dict[typing.Literal["x", "y", "z"] : list[float]]] | None
+        ) = None
         self.moose_cli_options: typing.Dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
         self.parallel_cli_options: typing.Dict[str, typing.Any] = None
+        self.slice_parse_interval: int = 60
 
         self._output_dir_path: pathlib.Path = None
         self._included_files: list[pathlib.Path] = []
@@ -119,6 +133,10 @@ class MooseRun(WrappedRun):
         self._log_header_keys: list[tuple[int, str]] | None = None
         self._postprocessor_block = False
         self._header_metadata = {}
+        self._exodus_last_processed_time: float | None = None
+        self._grids_defined: list[str] = []
+        self._slice_step: int = 0
+        self._last_parse_time: float = datetime.now(timezone.utc).timestamp()
 
         super().__init__(
             mode=mode,
@@ -694,6 +712,133 @@ class MooseRun(WrappedRun):
             ):
                 self.save_file(file_path, category="input")
 
+    def _parse_slice(self) -> bool:
+        """Parse slices present in the FDS results files and extract data as metrics.
+
+        Returns
+        -------
+        bool
+            Whether the slice was successfuly extracted
+
+        """
+        _exodus_path = pathlib.Path(f"{self._output_dir_path / self._results_prefix}.e")
+        if not self.extract_exodus_slices or not _exodus_path.exists():
+            return True
+        try:
+            reader: pyvista.ExodusIIReader = pyvista.get_reader(_exodus_path)
+
+        except Exception as e:
+            print(
+                f"""
+                Unable to load Exodus data found at '{_exodus_path}'. Slice parsing is disabled for this run.
+                This is because: {e}
+                Please correct the issue described above, or raise a bug report via the UI if you think this is incorrect.
+                """
+            )
+            return False
+        times = reader.time_values
+        times_to_process = (
+            times
+            if self._exodus_last_processed_time is None
+            else [time for time in times if time > self._exodus_last_processed_time]
+        )
+        for time_idx, time_val in enumerate(times_to_process):
+            # Need to estimate timestamp which this measurement would correspond to
+            # Will use estimate = timestamp of last parse + (now - last parse) * (idx/len(times_out))
+            timestamp = self._last_parse_time + (
+                datetime.now(timezone.utc).timestamp() - self._last_parse_time
+            ) * ((time_idx + 1) / len(times_to_process))
+
+            reader.set_active_time_value(time_val)
+            mesh_blocks = reader.read()
+            element_blocks = mesh_blocks.get("Element Blocks")
+            if not element_blocks or element_blocks.is_empty:
+                print("Exodus output contains no populated element blocks.")
+                return False
+            mesh = element_blocks.combine()
+            bounds = mesh.bounds
+            for var_name, slice_info in self.extract_exodus_slices.items():
+                if var_name not in mesh.array_names:
+                    # Log message?
+                    continue
+                for axis, fixed_dims in slice_info.items():
+                    ax_labels, ax1_ticks, ax2_ticks = get_varying_axes_ticks(mesh, axis)
+                    if (grid_name := f"{var_name}.{axis}") not in self._grids_defined:
+                        self.assign_metric_to_grid(
+                            metric_name=grid_name,  # This wont exist but doesnt do any harm afalk
+                            grid_name=grid_name,
+                            axes_ticks=[
+                                ax1_ticks.tolist(),
+                                ax2_ticks.tolist(),
+                            ],
+                            axes_labels=ax_labels,
+                        )
+                        self._grids_defined.append(grid_name)
+                    ax1_grid, ax2_grid = numpy.meshgrid(ax1_ticks, ax2_ticks)
+
+                    for fixed_dim in fixed_dims:
+                        if not check_within_bounds(fixed_dim, bounds, axis):
+                            # Maybe print log message here
+                            continue
+                        dims = [0, 0, 0]
+                        dims[AXES_IDX[axis]] = fixed_dim
+                        mesh_slice = mesh.slice(axis, dims)
+                        if mesh_slice.is_empty:
+                            continue
+
+                        c_stack = [ax1_grid.ravel(), ax2_grid.ravel()]
+                        c_stack.insert(
+                            AXES_IDX[axis],
+                            numpy.full(
+                                ax1_grid.size, mesh_slice.bounds[AXES_IDX[axis] * 2]
+                            ),
+                        )
+                        grid_points = numpy.column_stack(c_stack)
+                        grid = pyvista.PolyData(grid_points)
+                        sampled = grid.sample(mesh_slice)
+                        vals = sampled[var_name].reshape(ax1_grid.shape)
+
+                        value = str(round(fixed_dim, 3)).replace(".", "_")
+                        metric_name = f"{var_name}.{axis}.{value}"
+
+                        if metric_name not in self._grids_defined:
+                            self.assign_metric_to_grid(
+                                metric_name=metric_name, grid_name=grid_name
+                            )
+                            self._grids_defined.append(metric_name)
+                        self.log_metrics(
+                            {
+                                metric_name: vals,
+                                f"{metric_name}.min": numpy.min(vals),
+                                f"{metric_name}.max": numpy.max(vals),
+                                f"{metric_name}.avg": numpy.mean(vals),
+                            },
+                            time=time_val,
+                            step=self._slice_step + time_idx,
+                            timestamp=datetime.fromtimestamp(
+                                timestamp, tz=timezone.utc
+                            ),
+                        )
+        self._slice_step += len(times_to_process)
+        self._last_parse_time = datetime.now(timezone.utc).timestamp()
+        self._exodus_last_processed_time = time_val
+        return True
+
+    def _slice_parser(self) -> None:
+        """Read and process all 2D slice files in a loop, uploading min, max and mean as metrics."""
+        while True:
+            try:
+                trigger_set = self._trigger.wait(timeout=self.slice_parse_interval)
+                slice_parsed = self._parse_slice()
+            except Exception:
+                print(
+                    "Exodus parsing has failed due to an unexpected error. Slice parsing is disabled for the remainder of this run."
+                )
+                raise
+
+            if trigger_set or not slice_parsed:
+                break
+
     def _pre_simulation(self):
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
@@ -755,6 +900,12 @@ class MooseRun(WrappedRun):
             completion_trigger=self._trigger,
             cwd=self.workdir_path,
         )
+
+        if self.extract_exodus_slices:
+            self.slice_parser = threading.Thread(
+                target=self._slice_parser, daemon=True, name="slice_parser"
+            )
+            self.slice_parser.start()
 
     def _during_simulation(self):
         """Describe which files should be monitored during the simulation by Multiparser."""
@@ -830,6 +981,10 @@ class MooseRun(WrappedRun):
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
+        extract_exodus_slices: dict[
+            str, dict[typing.Literal["x", "y", "z"] : list[float]]
+        ]
+        | None = None,
         moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
@@ -864,6 +1019,8 @@ class MooseRun(WrappedRun):
             Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
+        extract_exodus_slices : dict[str, dict[typing.Literal["x", "y", "z"]: list[float]]] | None, optional
+            2D slices to extract from the Exodus file and upload as metrics, by default None (disabled)
         moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
             Any options to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
@@ -892,6 +1049,7 @@ class MooseRun(WrappedRun):
         self.upload_files = upload_files
         self.upload_miscellaneous_logs = upload_miscellaneous_logs
         self.track_vector_postprocessors = track_vector_postprocessors
+        self.extract_exodus_slices = extract_exodus_slices
         self.moose_cli_options = moose_cli_options or {}
         self.run_in_parallel = run_in_parallel
         self.num_processors = num_processors

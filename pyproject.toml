@@ -11,6 +11,7 @@ dependencies = [
     "simvue-connector (>=1.1.2)",
     "pandas (>=2.2.3)",
     "numpy (>=2.0.0,<3.0.0)",
+    "pyvista (>=0.49.0,<0.50.0)",
     ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
