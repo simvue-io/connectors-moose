@@ -223,7 +223,7 @@ class MooseRun(WrappedRun):
             keys.pop()
         # Find lines which represent starts of new blocks
         # Eg [Mesh] - so look for square brackets with any characters between (already screened out end blocks above)
-        elif new_key := re.fullmatch(r"\[.+\]", line):
+        elif new_key := re.fullmatch(r"\[[^\[\]]+\]", line):
             # Add the title of the new block to the key, dot separated notation
             # Remove './' from before the titles of blocks if present
             # Replace a '.' with '_' to prevent issues with dot notation of keys, but still allow users to use dots in block names
