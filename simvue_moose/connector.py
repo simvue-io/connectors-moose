@@ -818,9 +818,9 @@ class MooseRun(WrappedRun):
                         self.log_metrics(
                             {
                                 metric_name: vals,
-                                f"{metric_name}.min": numpy.min(vals),
-                                f"{metric_name}.max": numpy.max(vals),
-                                f"{metric_name}.avg": numpy.mean(vals),
+                                f"{metric_name}.min": numpy.nanmin(vals),
+                                f"{metric_name}.max": numpy.nanmax(vals),
+                                f"{metric_name}.avg": numpy.nanmean(vals),
                             },
                             time=time_val,
                             step=self._slice_step + time_idx,
