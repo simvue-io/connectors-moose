@@ -825,7 +825,11 @@ class MooseRun(WrappedRun):
                         )
         self._slice_step += len(times_to_process)
         self._last_parse_time = datetime.now(timezone.utc).timestamp()
-        self._exodus_last_processed_time = time_val
+        self._exodus_last_processed_time = (
+            times_to_process[-1]
+            if times_to_process
+            else self._exodus_last_processed_time
+        )
         return True
 
     def _slice_parser(self) -> None:
