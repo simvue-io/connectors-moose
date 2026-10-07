@@ -794,7 +794,7 @@ class MooseRun(WrappedRun):
                         if not valid.any():
                             continue  # add message here
                         vals = numpy.asarray(sampled[var_name], dtype=float)
-                        vals[~valid] - numpy.nan
+                        vals[~valid] = numpy.nan
                         vals = vals.reshape(ax1_grid.shape)
 
                         value = str(round(fixed_dim, 3)).replace(".", "_")
