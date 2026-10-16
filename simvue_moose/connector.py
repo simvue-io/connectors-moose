@@ -775,11 +775,16 @@ class MooseRun(WrappedRun):
         # Record time here, for that for static problems the overall time for execution will be returned
         self._time = time.time()
 
-        if not self.log_path:
-            self.log_path = (
-                f"{self._output_dir_path / self._results_prefix}.txt"
+        if self.log_path:
+            _log_paths = [str(self.log_path)]
+        else:
+            _log_paths = (
+                [
+                    f"{self._output_dir_path / self._results_prefix}.txt",
+                    f"{self._output_dir_path / self._results_prefix}_console.txt",
+                ]
                 if self._watching
-                else f"{self.name}_moose_simulation.out"
+                else [f"{self.name}_moose_simulation.out"]
             )
 
         self.file_monitor.exclude(
@@ -788,7 +793,7 @@ class MooseRun(WrappedRun):
 
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            path_glob_exprs=str(self.log_path),
+            path_glob_exprs=_log_paths,
             parser_func=mp_tail_parser.log_parser(self._log_parser),
             callback=self._log_callback,
         )
