@@ -949,7 +949,6 @@ class MooseRun(WrappedRun):
         log_path : str | pydantic.FilePath | None, optional
             The path to a file containing MOOSE console output to parse for this run
             By default, will try to find a `{results_prefix}.txt` file in the results directory.
-            Will raise an exception if multiple files are found and a log_path is not provided.
         upload_files : list[str] | None, optional
             List of results file names to upload to the Simvue server for storage, by default None
             Results should be supplied relative to the output directory provided in the MOOSE file,
