@@ -96,10 +96,10 @@ class MooseRun(WrappedRun):
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
-        self.moose_cli_options: typing.Dict[str, typing.Any] = None
+        self.moose_cli_options: dict[str, typing.Any] = None
         self.run_in_parallel: bool = None
         self.num_processors: int = None
-        self.parallel_cli_options: typing.Dict[str, typing.Any] = None
+        self.parallel_cli_options: dict[str, typing.Any] = None
 
         self._output_dir_path: pathlib.Path = None
         self._included_files: list[pathlib.Path] = []
@@ -632,7 +632,7 @@ class MooseRun(WrappedRun):
         for col in data.columns:
             metric_name = f"{vector_name}.{col}"
             # Assign to grid if required
-            if metric_name not in self._grids.keys():
+            if metric_name not in self._grids:
                 self.assign_metric_to_grid(
                     metric_name=metric_name,
                     axes_ticks=[varying_dims[0].values],
@@ -644,16 +644,16 @@ class MooseRun(WrappedRun):
 
     def _per_metric_callback(
         self,
-        csv_data: typing.Dict[str, float | numpy.ndarray],
-        sim_metadata: typing.Dict[str, str],
+        csv_data: dict[str, float | numpy.ndarray],
+        sim_metadata: dict[str, str],
     ) -> None:
         """Monitor each line in the results CSV file, and add data from it to Simvue Metrics.
 
         Parameters
         ----------
-        csv_data : typing.Dict[str, float | numpy.ndarray]
+        csv_data : dict[str, float | numpy.ndarray]
             The data from the latest line in the CSV file
-        sim_metadata : typing.Dict[str, str]
+        sim_metadata : dict[str, str]
             The metadata about when this line was read by Multiparser
 
         """
@@ -830,10 +830,10 @@ class MooseRun(WrappedRun):
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
-        moose_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        moose_cli_options: dict[str, typing.Any] | None = None,
         run_in_parallel: bool = False,
         num_processors: int = 1,
-        parallel_cli_options: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        parallel_cli_options: dict[str, typing.Any] | None = None,
     ):
         """Command to launch the MOOSE simulation and track it with Simvue.
 
@@ -864,13 +864,13 @@ class MooseRun(WrappedRun):
             Note - this may cause a large volume of events to be uploaded!
         track_vector_postprocessors : bool, optional
             Whether to track CSV outputs from Vector PostProcessors, by default False
-        moose_cli_options : typing.Optional[typing.Dict[str, typing.Any]], optional
+        moose_cli_options : dict[str, typing.Any] | None, optional
             Any options to be passed to MOOSE on startup, by default None
         run_in_parallel: bool, optional
             Whether to run the MOOSE simulation in parallel, by default False
         num_processors : int, optional
             The number of processors to run a parallel MOOSE job across, by default 1
-        parallel_cli_options : typing.Optional[typing.Dict[str, typing.Any]]
+        parallel_cli_options : dict[str, typing.Any] | None, optional
             Any options to pass to the parallel job launcher on startup if running in parallel, by default None
             These will be applied to whichever parallel job launcher is found first.
             Looks for `srun` if running on a SLURM system, then `mpiexec`, then `mpirun`.
