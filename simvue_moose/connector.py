@@ -93,6 +93,7 @@ class MooseRun(WrappedRun):
         self.moose_application_path: pydantic.FilePath = None
         self.moose_file_paths: list[pydantic.FilePath] = None
         self.workdir_path: pathlib.Path | None = None
+        self.log_path: pathlib.Path | None = None
         self.upload_files: list[str] | None = None
         self.upload_miscellaneous_logs: bool = False
         self.track_vector_postprocessors: bool = None
@@ -685,7 +686,17 @@ class MooseRun(WrappedRun):
         self._moose_input_callback(input_metadata)
 
         # Determine output location
-        self._output_dir_path, self._results_prefix = self._find_results_dir()
+        _output_dir_path, self._results_prefix = self._find_results_dir()
+
+        if (
+            self._output_dir_path
+            and self._file_base
+            and _output_dir_path.resolve() != self._output_dir_path.resolve()
+        ):
+            print(
+                f"Warning: File base specified in input file, '{self._file_base}', conflicts with user provided results_dir path. The path in the MOOSE input file will be ignored."
+            )
+        self._output_dir_path = self._output_dir_path or _output_dir_path
 
         # Save the MOOSE file for this run to the Simvue server
         for file_path in self.moose_file_paths + self._included_files:
@@ -694,7 +705,7 @@ class MooseRun(WrappedRun):
             ):
                 self.save_file(file_path, category="input")
 
-    def _pre_simulation(self):
+    def _pre_simulation(self) -> None:
         """Upload information to Simvue before the MOOSE simulation begins."""
         super()._pre_simulation()
 
@@ -711,6 +722,7 @@ class MooseRun(WrappedRun):
 
         self._upload_parse_input_files()
 
+    def _start_simulation(self) -> None:
         # Save the MOOSE Makefile
         if (
             pathlib.Path(self.moose_application_path)
@@ -756,12 +768,19 @@ class MooseRun(WrappedRun):
             cwd=self.workdir_path,
         )
 
-    def _during_simulation(self):
+    def _during_simulation(self) -> None:
         """Describe which files should be monitored during the simulation by Multiparser."""
         self.log_event("Beginning MOOSE simulation...")
 
         # Record time here, for that for static problems the overall time for execution will be returned
         self._time = time.time()
+
+        if not self.log_path:
+            self.log_path = (
+                f"{self._output_dir_path / self._results_prefix}.txt"
+                if self._watching
+                else f"{self.name}_moose_simulation.out"
+            )
 
         self.file_monitor.exclude(
             str(self._output_dir_path.joinpath(f"{self._results_prefix}_*_time.csv"))
@@ -769,7 +788,7 @@ class MooseRun(WrappedRun):
 
         # Monitor each line added to the MOOSE log file as the simulation proceeds and look out for certain phrases to upload to Simvue
         self.file_monitor.tail(
-            path_glob_exprs=f"{self.name}_moose_simulation.out",
+            path_glob_exprs=str(self.log_path),
             parser_func=mp_tail_parser.log_parser(self._log_parser),
             callback=self._log_callback,
         )
@@ -791,7 +810,7 @@ class MooseRun(WrappedRun):
                 static=True,
             )
 
-    def _post_simulation(self):
+    def _post_simulation(self) -> None:
         """Upload information to Simvue after the MOOSE simulation finishes."""
         # If only header information logged, and then MOOSE stops, still want to upload this info
         if self._log_header_keys is not None and self._header_metadata:
@@ -834,7 +853,7 @@ class MooseRun(WrappedRun):
         run_in_parallel: bool = False,
         num_processors: int = 1,
         parallel_cli_options: dict[str, typing.Any] | None = None,
-    ):
+    ) -> None:
         """Command to launch the MOOSE simulation and track it with Simvue.
 
         Note the following current limitations:
@@ -901,6 +920,65 @@ class MooseRun(WrappedRun):
 
     @simvue.utilities.prettify_pydantic
     @pydantic.validate_call
+    def watch(
+        self,
+        moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
+        pid: int,
+        results_dir: str | pydantic.DirectoryPath | None = None,
+        log_path: str | pydantic.FilePath | None = None,
+        upload_files: list[str] | None = None,
+        upload_miscellaneous_logs: bool = False,
+        track_vector_postprocessors: bool = False,
+    ) -> None:
+        """Command to watch a directory for a set of results from a MOOSE simulation, and upload to Simvue in real time.
+
+        Parameters
+        ----------
+        moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
+            Path to the MOOSE configuration file(s)
+        pid: int
+            The process ID of the MOOSE run
+        results_dir : str | pydantic.DirectoryPath | None, optional
+            A path to a directory containing MOOSE simulation results to upload
+            By default, will use the location specified in the MOOSE file, or fallback to current working directory if file_base not specified.
+        log_path : str | pydantic.FilePath | None, optional
+            The path to a file containing MOOSE console output to parse for this run
+            By default, will try to find a `{results_prefix}.txt` file in the results directory.
+            Will raise an exception if multiple files are found and a log_path is not provided.
+        upload_files : list[str] | None, optional
+            List of results file names to upload to the Simvue server for storage, by default None
+            Results should be supplied relative to the output directory provided in the MOOSE file,
+            and/or specify the name of the input file.
+            If not specified, will upload all files by default. If you want no results files to be uploaded, provide an empty list.
+        upload_miscellaneous_logs : bool, optional
+            Whether to upload any lines from the console log which have not been otherwise handled as Events, by default False
+            Note - this may cause a large volume of events to be uploaded!
+        track_vector_postprocessors : bool, optional
+            Whether to track CSV outputs from Vector PostProcessors, by default False
+
+        Raises
+        ------
+        ValueError
+            Raised if no MOOSE input files provided to connector
+
+        """
+        self.moose_file_paths = (
+            moose_file_path if isinstance(moose_file_path, list) else [moose_file_path]
+        )
+        if not moose_file_path:
+            raise ValueError("At least one MOOSE input file path must be provided!")
+
+        self.log_path = pathlib.Path(log_path) if log_path else None
+        self.upload_files = upload_files
+        self.upload_miscellaneous_logs = upload_miscellaneous_logs
+        self.track_vector_postprocessors = track_vector_postprocessors
+        self._loading_historic_run = True
+        self._output_dir_path = pathlib.Path(results_dir) if results_dir else None
+
+        super().watch(pid)
+
+    @simvue.utilities.prettify_pydantic
+    @pydantic.validate_call
     def load(
         self,
         moose_file_path: pydantic.FilePath | list[pydantic.FilePath],
@@ -909,13 +987,13 @@ class MooseRun(WrappedRun):
         upload_files: list[str] | None = None,
         upload_miscellaneous_logs: bool = False,
         track_vector_postprocessors: bool = False,
-    ):
+    ) -> None:
         """Command to load a set of results from a MOOSE simulation into Simvue.
 
         Parameters
         ----------
         moose_file_path : pydantic.FilePath | list[pydantic.FilePath]
-            Path to the MOOSE configuration file
+            Path to the MOOSE configuration file(s)
         results_dir : pydantic.DirectoryPath | None, optional
             A path to a directory containing MOOSE simulation results to upload
             By default, will use the location specified in the MOOSE file, or fallback to current working directory if file_base not specified.
@@ -955,17 +1033,8 @@ class MooseRun(WrappedRun):
         self.track_vector_postprocessors = track_vector_postprocessors
         self._loading_historic_run = True
 
+        self._output_dir_path = results_dir
         self._upload_parse_input_files()
-
-        if results_dir:
-            if (
-                self._file_base
-                and results_dir.resolve() != self._output_dir_path.resolve()
-            ):
-                print(
-                    f"Warning: File base specified in input file, '{self._file_base}', conflicts with user provided results_dir path. The path in the MOOSE input file will be ignored."
-                )
-            self._output_dir_path = results_dir
 
         if not self._output_dir_path.exists():
             raise FileNotFoundError(
