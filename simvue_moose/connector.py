@@ -471,7 +471,7 @@ class MooseRun(WrappedRun):
                         self._steady = True
 
                 if name == "time_step":
-                    self.log_event(line.rstrip())
+                    self.log_event(line.rstrip(), log_level="info")
                     self._time = time.time()
                     self._step_num = int(match.group(1))
                     self._step_time = float(match.group(2))
@@ -481,13 +481,22 @@ class MooseRun(WrappedRun):
                     self._nonlinear = 0
 
                 elif name in ("converged", "non_converged"):
-                    self.log_event(line.rstrip().title())
+                    self.log_event(
+                        line.rstrip().title(),
+                        log_level="info" if name == "converged" else "error",
+                    )
                     if not self._loading_historic_run and not self._steady:
                         self.log_event(
-                            f" Step calculation time: {round((time.time() - self._time), 2)} seconds."
+                            f" Step calculation time: {round((time.time() - self._time), 2)} seconds.",
+                            log_level="info",
                         )
-                    self.log_event(f" Total Nonlinear Iterations: {self._nonlinear}.")
-                    self.log_event(f" Total Linear Iterations: {self._linear}.")
+                    self.log_event(
+                        f" Total Nonlinear Iterations: {self._nonlinear}.",
+                        log_level="info",
+                    )
+                    self.log_event(
+                        f" Total Linear Iterations: {self._linear}.", log_level="info"
+                    )
 
                     if not self._steady:
                         self.log_metrics(
@@ -504,7 +513,8 @@ class MooseRun(WrappedRun):
                     self._nonlinear += 1
                     if self._steady:
                         self.log_event(
-                            f"Beginning Nonlinear Iteration {match.group(1)}"
+                            f"Beginning Nonlinear Iteration {match.group(1)}",
+                            log_level="info",
                         )
                         self.log_metrics(
                             {"nonlinear_iteration_residuals": float(match.group(2))},
@@ -519,7 +529,7 @@ class MooseRun(WrappedRun):
                         )
 
                 elif name == "terminated":
-                    self.log_event(line.rstrip())
+                    self.log_event(line.rstrip(), log_level="error")
                     self._terminated = True
 
                     terminator = match.group(1)
@@ -537,7 +547,7 @@ class MooseRun(WrappedRun):
                 # Since header info is only printed once, will also upload this as Events
                 # So that misc log lines between header and solve beginning are not missed
                 if self.upload_miscellaneous_logs and line.strip():
-                    self.log_event(line)
+                    self.log_event(line, log_level="debug")
 
     @mp_file_parser.file_parser
     def _vector_postprocessor_parser(
@@ -758,7 +768,7 @@ class MooseRun(WrappedRun):
 
     def _during_simulation(self):
         """Describe which files should be monitored during the simulation by Multiparser."""
-        self.log_event("Beginning MOOSE simulation...")
+        self.log_event("Beginning MOOSE simulation...", log_level="info")
 
         # Record time here, for that for static problems the overall time for execution will be returned
         self._time = time.time()
