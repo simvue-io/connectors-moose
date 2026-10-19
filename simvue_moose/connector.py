@@ -529,7 +529,7 @@ class MooseRun(WrappedRun):
                         )
 
                 elif name == "terminated":
-                    self.log_event(line.rstrip(), log_level="error")
+                    self.log_event(line.rstrip(), log_level="warning")
                     self._terminated = True
 
                     terminator = match.group(1)
