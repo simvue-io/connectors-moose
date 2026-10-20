@@ -55,7 +55,7 @@ def run_moose(
             )
         elif method == "watch":
             process = subprocess.Popen(
-                ["bash", str(moose_app_path), "-i", str(moose_file_path)],
+                [str(moose_app_path.absolute()), "-i", str(moose_file_path.absolute())],
                 cwd=workdir_path,
             )
             run.watch(
