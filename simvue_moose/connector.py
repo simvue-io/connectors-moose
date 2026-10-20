@@ -483,7 +483,7 @@ class MooseRun(WrappedRun):
                 elif name in ("converged", "non_converged"):
                     self.log_event(
                         line.rstrip().title(),
-                        log_level="info" if name == "converged" else "error",
+                        log_level="info" if name == "converged" else "warning",
                     )
                     if not self._loading_historic_run and not self._steady:
                         self.log_event(
