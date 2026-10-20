@@ -95,19 +95,19 @@ def run_moose(
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
-@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
-def test_moose_connector(offline, parallel, load, offline_cache_setup):
+@pytest.mark.parametrize(
+    "method",
+    ("launch-parallel", "launch-serial", "watch", "load"),
+)
+def test_moose_connector(offline, method, offline_cache_setup):
     try:
         subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
         pytest.skip(
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
-    if load:
-        if parallel:
-            pytest.skip("Parallel has no effect when loading from historic runs")
-        # Create a temp dir to contain results
+
+    # Create a temp dir to contain results
     with tempfile.TemporaryDirectory() as tempd:
         run_id = run_moose(
             moose_file_path=pathlib.Path(__file__).parent.joinpath(
@@ -118,8 +118,7 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
             ),
             workdir_path=pathlib.Path(tempd),
             offline=offline,
-            parallel=parallel,
-            load=load,
+            method=method,
             upload_misc_logs=False,
             moose_app_path=MOOSE_APP_PATH,
         )
@@ -146,7 +145,7 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
         == "Transient"
     )
 
-    if parallel:
+    if "parallel" in method:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
     else:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
@@ -215,20 +214,19 @@ def test_moose_connector(offline, parallel, load, offline_cache_setup):
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
-@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
-def test_moose_steady(offline, parallel, load, offline_cache_setup):
+@pytest.mark.parametrize(
+    "method",
+    ("launch-parallel", "launch-serial", "watch", "load"),
+)
+def test_moose_steady(offline, method, offline_cache_setup):
     try:
         subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
         pytest.skip(
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
-    if load:
-        if parallel:
-            pytest.skip("Parallel has no effect when loading from historic runs")
 
-        # Create a temp dir to contain results
+    # Create a temp dir to contain results
     with tempfile.TemporaryDirectory() as tempd:
         # Need to make a copy of the input file into the workdir
         # Because file_base not specified, so will make results relative to input file
@@ -243,8 +241,7 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
             ),
             workdir_path=None,
             offline=offline,
-            parallel=parallel,
-            load=load,
+            method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
         )
@@ -270,7 +267,7 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
         run_data.metadata["moose"]["execution_information"]["executioner"] == "Steady"
     )
 
-    if parallel:
+    if "parallel" in method:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
     else:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
@@ -317,18 +314,16 @@ def test_moose_steady(offline, parallel, load, offline_cache_setup):
 
 
 @pytest.mark.parametrize("offline", (True, False), ids=("offline", "online"))
-@pytest.mark.parametrize("parallel", (True, False), ids=("parallel", "serial"))
-@pytest.mark.parametrize("load", (True, False), ids=("load", "launch"))
-def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
+@pytest.mark.parametrize(
+    "method", ("launch-parallel", "launch-serial", "watch", "load")
+)
+def test_moose_multi_input(offline, method, offline_cache_setup):
     try:
         subprocess.run(MOOSE_APP_PATH)
     except FileNotFoundError:
         pytest.skip(
             "You are attempting to run MOOSE Integration Tests without having MOOSE installed."
         )
-    if load:
-        if parallel:
-            pytest.skip("Parallel has no effect when loading from historic runs")
 
         # Create a temp dir to contain results
     with tempfile.TemporaryDirectory() as tempd:
@@ -355,8 +350,7 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
             ),
             workdir_path=None,
             offline=offline,
-            parallel=parallel,
-            load=load,
+            method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
         )
@@ -377,7 +371,7 @@ def test_moose_multi_input(offline, parallel, load, offline_cache_setup):
         run_data.metadata["moose"]["execution_information"]["executioner"] == "Steady"
     )
 
-    if parallel:
+    if "parallel" in method:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 2
     else:
         assert run_data.metadata["moose"]["parallelism"]["num_processors"] == 1
