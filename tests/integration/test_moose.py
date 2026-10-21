@@ -18,11 +18,12 @@ def run_moose(
     moose_file_path: pathlib.Path,
     load_results_dir,
     workdir_path,
+    watch_path,
+    watch_log,
     offline,
     method: typing.Literal["launch-serial", "launch-parallel", "load", "watch"],
     upload_misc_logs,
     moose_app_path,
-    watch_log_path: bool,
 ) -> None:
 
     # Initialise the MooseRun class as a context manager
@@ -55,7 +56,11 @@ def run_moose(
                 upload_miscellaneous_logs=upload_misc_logs,
             )
         elif method == "watch":
-            log_path = pathlib.Path(workdir_path).joinpath("out.log")
+            log_path = (
+                pathlib.Path(workdir_path).joinpath("out.log")
+                if workdir_path
+                else moose_file_path.parent.joinpath("out.log")
+            )
             with log_path.open("w") as out_f:
                 process = subprocess.Popen(
                     [
@@ -64,14 +69,14 @@ def run_moose(
                         str(moose_file_path.absolute()),
                     ],
                     cwd=workdir_path,
-                    stdout=out_f if watch_log_path else None,
-                    stderr=out_f if watch_log_path else None,
+                    stdout=out_f if watch_log else None,
+                    stderr=out_f if watch_log else None,
                 )
                 run.watch(
                     moose_file_path=moose_file_path,
                     pid=process.pid,
-                    results_dir=workdir_path,
-                    log_path=log_path if watch_log_path else None,
+                    results_dir=watch_path,
+                    log_path=log_path if watch_log else None,
                     upload_miscellaneous_logs=upload_misc_logs,
                     track_vector_postprocessors=True,
                 )
@@ -127,11 +132,12 @@ def test_moose_connector(offline, method, offline_cache_setup):
                 "example_data", "thermal_bar_results"
             ),
             workdir_path=pathlib.Path(tempd),
+            watch_path=pathlib.Path(tempd) / "test_results",
+            watch_log=False,
             offline=offline,
             method=method,
             upload_misc_logs=False,
             moose_app_path=MOOSE_APP_PATH,
-            watch_log_path=False,
         )
 
     client = simvue.Client()
@@ -251,11 +257,12 @@ def test_moose_steady(offline, method, offline_cache_setup):
                 "example_data", "diffusion_results"
             ),
             workdir_path=None,
+            watch_path=None,
+            watch_log=False,
             offline=offline,
             method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
-            watch_log_path=False,
         )
 
     client = simvue.Client()
@@ -361,6 +368,8 @@ def test_moose_multi_input(offline, method, offline_cache_setup):
                 "example_data", "multi_input_results"
             ),
             workdir_path=None,
+            watch_path=None,
+            watch_log=False,
             offline=offline,
             method=method,
             upload_misc_logs=True,
