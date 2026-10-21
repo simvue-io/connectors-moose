@@ -11,7 +11,7 @@ from simvue.sender import Sender
 from simvue.api.objects import GridMetrics
 
 # Set this variable to wherever your MOOSE app is located:
-MOOSE_APP_PATH = "/opt/moose/bin/moose-opt"
+MOOSE_APP_PATH = pathlib.Path("/opt/moose/bin/moose-opt")
 
 
 def run_moose(
