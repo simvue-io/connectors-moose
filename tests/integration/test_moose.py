@@ -71,6 +71,8 @@ def run_moose(
                 process = subprocess.Popen(
                     [
                         str(moose_app_path.absolute()),
+                        "--color",
+                        "off",
                         "-i",
                         *[str(path.absolute()) for path in moose_file_paths],
                     ],
