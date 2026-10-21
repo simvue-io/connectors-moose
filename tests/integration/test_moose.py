@@ -57,9 +57,9 @@ def run_moose(
             )
         elif method == "watch":
             parent_path = (
-                moose_file_path[0].parent.joinpath("out.log")
+                moose_file_path[0].parent
                 if isinstance(moose_file_path, list)
-                else moose_file_path.parent.joinpath("out.log")
+                else moose_file_path.parent
             )
             log_path = (
                 pathlib.Path(workdir_path).joinpath("out.log")
