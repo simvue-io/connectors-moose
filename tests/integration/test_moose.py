@@ -56,10 +56,15 @@ def run_moose(
                 upload_miscellaneous_logs=upload_misc_logs,
             )
         elif method == "watch":
+            parent_path = (
+                moose_file_path[0].parent.joinpath("out.log")
+                if isinstance(moose_file_path, list)
+                else moose_file_path.parent.joinpath("out.log")
+            )
             log_path = (
                 pathlib.Path(workdir_path).joinpath("out.log")
                 if workdir_path
-                else moose_file_path.parent.joinpath("out.log")
+                else parent_path.joinpath("out.log")
             )
             with log_path.open("w") as out_f:
                 process = subprocess.Popen(
