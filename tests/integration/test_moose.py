@@ -369,12 +369,11 @@ def test_moose_multi_input(offline, method, offline_cache_setup):
             ),
             workdir_path=None,
             watch_path=None,
-            watch_log=False,
+            watch_log=True,
             offline=offline,
             method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
-            watch_log_path=True,
         )
 
     client = simvue.Client()
