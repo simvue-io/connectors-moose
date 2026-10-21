@@ -77,5 +77,6 @@
   [console]
     type = Console
     output_file = true
+  []
   csv = true
 []
