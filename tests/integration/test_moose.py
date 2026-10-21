@@ -22,13 +22,14 @@ def run_moose(
     method: typing.Literal["launch-serial", "launch-parallel", "load", "watch"],
     upload_misc_logs,
     moose_app_path,
+    watch_log_path: bool,
 ) -> None:
 
     # Initialise the MooseRun class as a context manager
     with MooseRun(mode="offline" if offline else "online") as run:
         # Initialise the run, providing a name for the run, and optionally extra information such as a folder, description, tags etc
         run.init(
-            name=f"fds-integration-{moose_file_path.stem if isinstance(moose_file_path, pathlib.Path) else moose_file_path[0].stem}-{method}-{'offline' if offline else 'online'}-{str(uuid.uuid4())}",
+            name=f"moose-integration-{moose_file_path.stem if isinstance(moose_file_path, pathlib.Path) else moose_file_path[0].stem}-{method}-{'offline' if offline else 'online'}-{str(uuid.uuid4())}",
             description="An example of using the MooseRun Connector to track a MOOSE simulation.",
             folder="/test-moose",
             tags=["moose", "thermal", "diffusion"],
@@ -54,18 +55,27 @@ def run_moose(
                 upload_miscellaneous_logs=upload_misc_logs,
             )
         elif method == "watch":
-            process = subprocess.Popen(
-                [str(moose_app_path.absolute()), "-i", str(moose_file_path.absolute())],
-                cwd=workdir_path,
-            )
-            run.watch(
-                moose_file_path=moose_file_path,
-                pid=process.pid,
-                results_dir=workdir_path,
-                upload_miscellaneous_logs=upload_misc_logs,
-                track_vector_postprocessors=True,
-            )
-            process.wait()  # reap the child process so it doesn't linger as a zombie
+            log_path = pathlib.Path(workdir_path).joinpath("out.log")
+            with log_path.open("w") as out_f:
+                process = subprocess.Popen(
+                    [
+                        str(moose_app_path.absolute()),
+                        "-i",
+                        str(moose_file_path.absolute()),
+                    ],
+                    cwd=workdir_path,
+                    stdout=out_f if watch_log_path else None,
+                    stderr=out_f if watch_log_path else None,
+                )
+                run.watch(
+                    moose_file_path=moose_file_path,
+                    pid=process.pid,
+                    results_dir=workdir_path,
+                    log_path=log_path if watch_log_path else None,
+                    upload_miscellaneous_logs=upload_misc_logs,
+                    track_vector_postprocessors=True,
+                )
+                process.wait()  # reap the child process so it doesn't linger as a zombie
         else:
             # Then call the .launch() method to start your MOOSE simulation
             run.launch(
@@ -121,6 +131,7 @@ def test_moose_connector(offline, method, offline_cache_setup):
             method=method,
             upload_misc_logs=False,
             moose_app_path=MOOSE_APP_PATH,
+            watch_log_path=False,
         )
 
     client = simvue.Client()
@@ -244,6 +255,7 @@ def test_moose_steady(offline, method, offline_cache_setup):
             method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
+            watch_log_path=False,
         )
 
     client = simvue.Client()
@@ -353,6 +365,7 @@ def test_moose_multi_input(offline, method, offline_cache_setup):
             method=method,
             upload_misc_logs=True,
             moose_app_path=MOOSE_APP_PATH,
+            watch_log_path=True,
         )
 
     client = simvue.Client()

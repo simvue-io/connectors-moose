@@ -74,5 +74,8 @@
   [exodus]
     type = Exodus
   []
+  [console]
+    type = Console
+    output_file = true
   csv = true
 []
