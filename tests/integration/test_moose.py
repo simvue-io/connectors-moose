@@ -55,24 +55,25 @@ def run_moose(
                 track_vector_postprocessors=True,
                 upload_miscellaneous_logs=upload_misc_logs,
             )
+
         elif method == "watch":
-            parent_path = (
-                moose_file_path[0].parent
-                if isinstance(moose_file_path, list)
-                else moose_file_path.parent
-            )
+            if isinstance(moose_file_path, pathlib.Path):
+                moose_file_paths = [moose_file_path]
+            else:
+                moose_file_paths = moose_file_path
+
             log_path = (
                 pathlib.Path(workdir_path).joinpath("out.log")
                 if workdir_path
-                else parent_path.joinpath("out.log")
+                else moose_file_paths[0].parent.joinpath("out.log")
             )
             with log_path.open("w") as out_f:
                 process = subprocess.Popen(
                     [
                         str(moose_app_path.absolute()),
                         "-i",
-                    ]
-                    + [path.absolute() for path in list(moose_file_path)],
+                        *[str(path.absolute()) for path in moose_file_paths],
+                    ],
                     cwd=workdir_path,
                     stdout=out_f if watch_log else None,
                     stderr=out_f if watch_log else None,
