@@ -71,8 +71,8 @@ def run_moose(
                     [
                         str(moose_app_path.absolute()),
                         "-i",
-                        str(moose_file_path.absolute()),
-                    ],
+                    ]
+                    + [path.absolute() for path in list(moose_file_path)],
                     cwd=workdir_path,
                     stdout=out_f if watch_log else None,
                     stderr=out_f if watch_log else None,
