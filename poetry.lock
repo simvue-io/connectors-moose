@@ -1564,17 +1564,21 @@ name = "simvue-connector"
 version = "1.1.2"
 description = "A generic class which all new Connectors (integrations which provide Simvue tracking for Non-Python software) should inherit from."
 optional = false
-python-versions = "<3.15,>=3.10"
+python-versions = ">=3.10,<3.15"
 groups = ["main"]
-files = [
-    {file = "simvue_connector-1.1.2-py3-none-any.whl", hash = "sha256:61aa9fa9036b567944fee2e32730c90700994d906b2b7746f6f2b3202ce8c088"},
-    {file = "simvue_connector-1.1.2.tar.gz", hash = "sha256:4a5ba4673ebab6ccf4eb825e51b6aeefa9ca8c29a8d9918b48292ddd4f8845d1"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 pydantic = ">=2.13.4,<3.0.0"
 simvue = ">=2.6.1"
 ukaea-multiparser = ">=1.0.8"
+
+[package.source]
+type = "git"
+url = "https://github.com/simvue-io/connectors-generic.git"
+reference = "wk9874/add_watch"
+resolved_reference = "77387127eaae23e4eefb3400557042d54c4f40b3"
 
 [[package]]
 name = "six"
@@ -1851,4 +1855,4 @@ dev = ["black (>=19.3b0) ; python_version >= \"3.6\"", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "6c0908222d0bb828e760f8b14f2d7a657e60471ac057626c593ac5ab33f59527"
+content-hash = "ff535314496c4536a0336aa8ecdbbd07889b997159a6c253ca8abbfb01028c5c"
